@@ -128,20 +128,25 @@ def get_log(con, txn_id):
 
 
 def build():
-    """Wipe and rebuild the synthetic campus dataset. Idempotent."""
+    """Wipe and rebuild the synthetic campus dataset, augmented with REAL
+    open-source scam/ham text (UCI SMS Spam Collection via miner.py). Idempotent."""
+    from . import miner
     if os.path.exists(DB_PATH):
         os.remove(DB_PATH)
     con = connect()
-    con.executemany(
-        "INSERT INTO recipients VALUES (?,?,?,?,?,?,?)", RECIPIENTS)
-    for txn_id, student, rid, amount, purpose, msg in SCENARIOS:
+    con.executemany("INSERT INTO recipients VALUES (?,?,?,?,?,?,?)",
+                    RECIPIENTS + miner.mined_recipients())
+    scenarios = SCENARIOS + miner.mined_scenarios()
+    for txn_id, student, rid, amount, purpose, msg in scenarios:
         con.execute(
             "INSERT INTO transactions (txn_id, student, recipient_id, amount_aed, purpose, message) "
             "VALUES (?,?,?,?,?,?)",
             (txn_id, student, rid, amount, purpose, msg))
     con.commit()
     n = con.execute("SELECT COUNT(*) c FROM transactions").fetchone()["c"]
-    print(f"dataset built: {n} transactions, {len(RECIPIENTS)} recipients -> {DB_PATH}")
+    print(f"dataset built: {n} transactions ({len(SCENARIOS)} authored + "
+          f"{n - len(SCENARIOS)} mined from UCI SMS Spam Collection), "
+          f"-> {DB_PATH}")
 
 
 if __name__ == "__main__":

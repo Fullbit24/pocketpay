@@ -25,9 +25,11 @@ service dies, guard rules R2/R2c/R3 hold the transaction for a human — never c
 ## Run it
 ```bash
 PY=~/.venv/bin/python   # needs openai pkg; LLM served locally at 127.0.0.1:8080
-$PY -m pocketpay.db      # build synthetic dataset → campus_wallet_logs.sqlite
+$PY -m pocketpay.db      # build dataset → campus_wallet_logs.sqlite
+                         # (14 authored scenarios + 7 REAL messages mined from
+                         #  the UCI SMS Spam Collection in data/ — see miner.py)
 $PY -m pocketpay.tests   # guard-rule + JSON-parser unit tests (no LLM needed)
-$PY -m pocketpay.demo    # full 14-scenario presentation run + staff-hours summary
+$PY -m pocketpay.demo    # full 21-scenario presentation run + staff-hours summary
 $PY -m pocketpay.ui      # live interactive campus terminal (stage interface)
 ```
 
