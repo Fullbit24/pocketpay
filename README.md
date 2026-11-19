@@ -25,16 +25,25 @@ service dies, guard rules R2/R2c/R3 hold the transaction for a human — never c
 ## Run it
 ```bash
 PY=~/.venv/bin/python   # needs openai pkg; LLM served locally at 127.0.0.1:8080
-$PY -m pocketpay.db      # build dataset → campus_wallet_logs.sqlite
-                         # (14 authored scenarios + 7 REAL messages mined from
-                         #  the UCI SMS Spam Collection in data/ — see miner.py)
-$PY -m pocketpay.tests   # guard-rule + JSON-parser unit tests (no LLM needed)
-$PY -m pocketpay.demo    # full 21-scenario presentation run + staff-hours summary
-$PY -m pocketpay.ui      # live interactive campus terminal (stage interface)
+$PY main.py build        # rebuild dataset → campus_wallet_logs.sqlite
+$PY main.py web          # ★ THE DASHBOARD — http://127.0.0.1:8401 (stage interface)
+$PY main.py tests        # guard-rule + parser unit tests (no LLM, instant)
+$PY main.py demo         # scripted 21-scenario terminal run (backup/fallback)
+$PY main.py ui           # original terminal UI (kept as fallback)
 ```
 
+## Stage routine (browser dashboard, ~4 min)
+1. Open TX-003 (the brief's own scam message) → **Run agent chain** → narrate the 5 colored
+   steps live: blue facts, purple LLM opinion (risk 96, "fake .top domain!"), red guard verdict.
+2. Open TX-012 (800 AED laptop share) → chain → PENDING → **Answer as the student** → confirm → CLEARED.
+   "The guard wouldn't auto-clear 800 AED. Only a human can move big money."
+3. **Judge moment:** read a shady message off a card (or ask a judge for one), paste into the
+   🚩 box → Triage live → escalates in front of them with a plain-English reason.
+   (Bonus move: hit **Run agent chain** on an already-triaged txn — the loop-guard step appears,
+   proving their #1 safety requirement live.)
+
 ## What the demo shows (maps to the brief's checklist)
-- **14 scenarios** (>10 required): canteen buys auto-clear, the brief's exact ticket scam,
+- **21 scenarios** (>10 required, incl. 7 real-world messages from the UCI corpus): canteen buys auto-clear, the brief's exact ticket scam,
   credential-phishing, repeat offenders, low-confidence slang (flagged without guessing),
   3 uncertain mid-risk cases escalated to staff, a **directory outage** with graceful fallback,
   confirm → CLEARED and cancel → CANCELLED flows.

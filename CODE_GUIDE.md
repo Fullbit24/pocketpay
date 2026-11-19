@@ -22,7 +22,8 @@ Every arrow is logged in decision_log → that's the visible audit trail on stag
 | agent.py | the loop: call tools, call LLM, hand opinion to guard. LLM result is parsed JSON or None — never a decision | SYSTEM:16, triage:105, resolve:174 |
 | guard.py | THE DECIDER. Pure function, no I/O. Rules R1→R7, first match wins | decide:15 |
 | demo.py | runs all 21 scenarios with scripted human answers | main:26 |
-| ui.py | stage interface. t=triage, r=resolve, n=live ad-hoc message | main:22 |
+| ui.py | fallback terminal. t=triage, r=resolve, n=live ad-hoc message | main:22 |
+| web.py | ★ the stage dashboard (stdlib http.server + one HTML page). It decides NOTHING — pure view over the same agent + sqlite. Judges see a product, architecture unchanged | serve:255, routes:52 |
 | tests.py | 12 unit tests for guard rules + the JSON repair parser | run() |
 
 ## The guard rules (the "algorithm" — know these cold)

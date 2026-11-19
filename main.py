@@ -13,6 +13,9 @@ def main():
     cmd = sys.argv[1] if len(sys.argv) > 1 else "ui"
     if cmd == "build":
         db.build()
+    elif cmd == "web":
+        from pocketpay import web
+        web.serve()
     elif cmd == "demo":
         from pocketpay import demo
         demo.main()
