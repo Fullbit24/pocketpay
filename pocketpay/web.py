@@ -159,6 +159,7 @@ input:focus,textarea:focus{border-color:var(--blue)}
 .chain h3{font-size:12px;letter-spacing:1.5px;color:var(--mut);margin-bottom:10px}
 .step{display:flex;gap:12px;padding:9px 0;border-bottom:1px dashed var(--line)}
 .dot{width:9px;height:9px;border-radius:50%;margin-top:7px;flex:none}
+.pulse{animation:pul 1.1s ease-in-out infinite}@keyframes pul{50%{opacity:.2}}
 .actor{font-weight:700;font-size:12.5px;text-transform:uppercase;letter-spacing:.5px;min-width:58px;margin-top:3px}
 .sdetail{font-size:13.5px;color:#c6cfdd}
 .t_ac_llm{background:var(--violet)}.t_ac_llm2{color:var(--violet)}
@@ -200,7 +201,7 @@ footer{border-top:1px solid var(--line);padding:9px 20px;font-size:12.5px;color:
   <div class="actions"><button class="btn green" id="mconfirm">Confirm I know them</button><button class="btn danger" id="mcancel">Cancel transfer</button><button class="btn ghost" onclick="closeModal()">Later</button></div>
 </div></div>
 <script>
-let ALL=[], FILTER="ALL", Q="", SEL="", LAST_V=null;
+let ALL=[], FILTER="ALL", Q="", SEL="", LAST_V=null, LAST_N=-1;
 const states=["ALL","RECEIVED","CLEAR","PENDING_CONFIRMATION","ESCALATED","CLEARED","CANCELLED"];
 async function api(path,body){const r=await fetch(path,body?{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}:undefined);return r.json()}
 function fmt(n){return "AED "+Number(n).toLocaleString(undefined,{maximumFractionDigits:0})}
@@ -217,8 +218,10 @@ function render(){renderStats();renderPills();const q=Q.toLowerCase();
    <div class="row1"><span class="id">${t.txn_id}</span><span class="st ${t.state}">${t.state.replace("_"," ")}</span><span class="amt">${fmt(t.amount_aed)}</span></div>
    <div class="who">${t.student} → ${t.recipient_id} · ${t.purpose}</div></div>`).join("")||`<div class="empty" style="margin-top:30px">nothing here</div>`}
 async function refresh(){ALL=(await api("/api/state")).transactions;render()}
+function chainHtml(log){return log.map(s=>`<div class="step"><span class="dot t_ac_${s.actor}"></span><span class="actor t_ac_${s.actor}2">${s.actor}</span><div><b style="font-size:13px">${s.step}</b><div class="sdetail">${esc(s.detail)}</div></div></div>`).join("")}
+const GHOST=`<div class="step"><span class="dot t_ac_llm pulse"></span><span class="actor t_ac_llm2">llm</span><div><b style="font-size:13px">reading the message…</b><div class="sdetail" style="color:var(--mut)">the brain is thinking. this is the slow part — everything after it takes milliseconds.</div></div></div>`;
 async function openTxn(id){SEL=id;render();const d=await api("/api/txn?id="+id);const t=d.txn;
- const chain=d.log.map(s=>`<div class="step"><span class="dot t_ac_${s.actor}"></span><span class="actor t_ac_${s.actor}2">${s.actor}</span><div><b style="font-size:13px">${s.step}</b><div class="sdetail">${esc(s.detail)}</div></div></div>`).join("");
+ LAST_N=d.log.length;
  const pending=t.state=="PENDING_CONFIRMATION";
  const v=(LAST_V&&LAST_V.id==id)?`<div class="verdict" style="display:block"><span class="v" style="color:${vcol(LAST_V.r.action)}">${LAST_V.r.action}</span> <span class="meta">via ${LAST_V.r.rule}</span><div class="e">${esc(LAST_V.r.explanation||"")}</div></div>`:`<div class="verdict" id="verdict"></div>`;
  document.getElementById("detail").innerHTML=`
@@ -230,11 +233,15 @@ async function openTxn(id){SEL=id;render();const d=await api("/api/txn?id="+id);
     ${pending?`<button class="btn green" onclick="openModal('${t.txn_id}')">🙋 Answer as the student</button>`:""}
   </div>
   ${v}
-  <div class="chain"><h3>DECISION LOG — every step, in order, no black boxes</h3>${chain||"<div class='meta'>no chain yet — hit ‘Run agent chain’.</div>"}</div>`}
+  <div class="chain"><h3>DECISION LOG — every step, in order, no black boxes</h3><div id="chainlist">${chainHtml(d.log)||"<div class='meta'>no chain yet — hit ‘Run agent chain’.</div>"}</div></div>`}
 function vcol(a){return (a=="CLEAR"||a=="CLEARED")?"var(--green)":a=="ESCALATED"?"var(--red)":a=="CANCELLED"?"var(--mut)":"var(--amber)"}
 function esc(s){return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
 async function triage(id){const b=document.getElementById("tri");b.disabled=true;document.getElementById("sp").style.display="inline-block";
- const r=await api("/api/triage",{txn_id:id});
+ // live view: while the agent runs server-side, poll its audit trail so the
+ // board paints each step the instant the agent commits it. Watch it think.
+ const iv=setInterval(async()=>{try{const d=await api("/api/txn?id="+id);const el=document.getElementById("chainlist");
+  if(el){LAST_N=d.log.length;el.innerHTML=chainHtml(d.log)+GHOST;}}catch(e){}},800);
+ let r;try{r=await api("/api/triage",{txn_id:id});}finally{clearInterval(iv)}
  LAST_V={id,r};
  await refresh();openTxn(id);
  if(r.action=="ESCALATED")ping();}
