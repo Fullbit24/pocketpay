@@ -113,92 +113,96 @@ PAGE = r"""<!doctype html>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>PocketPay · Campus Shield</title>
 <style>
-:root{--bg:#0b0e14;--panel:#121726;--panel2:#0e131f;--line:#1f2637;--tx:#e6ebf4;--mut:#8b96ad;
---green:#34d399;--amber:#fbbf24;--red:#f87171;--blue:#60a5fa;--violet:#a78bfa}
+:root{--bg:#0a0c10;--panel:#10131a;--panel2:#0c0f15;--line:#1c222c;--tx:#e2e6ed;--mut:#8f99a8;
+--green:#35b58a;--amber:#c9973f;--red:#dd5c5c;--blue:#5b8dd9;--cyan:#46b8cf}
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--tx);font:15px/1.5 ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden}
-header{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--line);background:linear-gradient(120deg,#101627,#0b0e14 60%)}
-.logo{width:34px;height:34px;border-radius:9px;background:radial-gradient(circle at 30% 30%,#f87171,#7f1d1d);display:grid;place-items:center;font-weight:800;color:#fff}
-h1{font-size:17px;letter-spacing:.3px}h1 b{color:var(--red)}
-.sub{font-size:12px;color:var(--mut)}
-.stats{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
-.chip{padding:6px 11px;border-radius:999px;background:var(--panel);border:1px solid var(--line);font-size:12.5px;color:var(--mut)}
-.chip b{color:var(--tx);font-size:14px;margin-left:4px}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+body{background:var(--bg);color:var(--tx);font:15px/1.55 ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden;font-variant-numeric:tabular-nums}
+header{display:flex;align-items:center;gap:14px;padding:15px 20px;border-bottom:1px solid var(--line)}
+.logo{width:30px;height:30px;border-radius:7px;background:var(--blue);color:#0a0c10;display:grid;place-items:center;font-weight:800;font-size:16px}
+h1{font-size:16px;font-weight:650;letter-spacing:-.01em}
+.sub{font-size:12.5px;color:var(--mut)}
+.stats{margin-left:auto;display:flex;gap:10px;flex-wrap:wrap}
+.chip{padding:5px 10px;border-radius:8px;background:var(--panel);border:1px solid var(--line);font-size:12px;color:var(--mut)}
+.chip b{color:var(--tx);font-size:13.5px;margin-left:5px}
 main{flex:1;display:grid;grid-template-columns:390px 1fr;min-height:0}
 .queue{border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;background:var(--panel2)}
 .searchbox{display:flex;gap:8px;padding:12px;border-bottom:1px solid var(--line)}
-input,textarea{background:#0a0f1a;border:1px solid var(--line);color:var(--tx);border-radius:8px;padding:9px 11px;font:inherit;outline:none;flex:1}
-input:focus,textarea:focus{border-color:var(--blue)}
+input,textarea{background:var(--bg);border:1px solid var(--line);color:var(--tx);border-radius:8px;padding:9px 11px;font:inherit;outline:none;flex:1}
+input:focus{border-color:var(--blue)}
 .pills{display:flex;gap:6px;padding:10px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
-.pill{font-size:11.5px;padding:4px 10px;border-radius:999px;background:var(--panel);border:1px solid var(--line);color:var(--mut);cursor:pointer;user-select:none}
-.pill.on{color:#fff;border-color:var(--blue)}
+.pill{font-size:12px;padding:4px 10px;border-radius:8px;background:var(--panel);border:1px solid var(--line);color:var(--mut);cursor:pointer;user-select:none}
+.pill.on{color:var(--tx);border-color:var(--blue)}
 .list{flex:1;overflow-y:auto;padding:8px}
-.card{padding:11px 12px;border:1px solid var(--line);border-radius:10px;margin-bottom:7px;cursor:pointer;background:var(--panel);transition:border-color .15s}
-.card:hover{border-color:#38507a}.card.sel{border-color:var(--blue)}
+.card{padding:11px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:7px;cursor:pointer;background:var(--panel)}
+.card:hover{border-color:#3a4a63}.card.sel{border-color:var(--blue)}
 .row1{display:flex;align-items:center;gap:8px;font-size:13px}
-.id{font-weight:700}.who{color:var(--mut);font-size:12px}
-.amt{margin-left:auto;font-weight:700}
-.st{font-size:10.5px;font-weight:700;letter-spacing:.4px;padding:2px 8px;border-radius:999px}
-.CLEAR,.CLEARED{color:var(--green);background:rgba(52,211,153,.1)}.ESCALATED{color:var(--red);background:rgba(248,113,113,.1)}
-.PENDING_CONFIRMATION{color:var(--amber);background:rgba(251,191,36,.1)}.RECEIVED,.TRIAGED{color:var(--blue);background:rgba(96,165,250,.1)}
-.CANCELLED{color:var(--mut);background:rgba(139,150,173,.1)}
-.detail{overflow-y:auto;padding:20px 24px;min-height:0}
+.id{font-weight:650;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px}
+.who{color:var(--mut);font-size:12px}
+.amt{margin-left:auto;font-weight:650;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px}
+.st{font-size:10.5px;font-weight:700;letter-spacing:.03em;padding:2px 8px;border-radius:6px}
+.CLEAR,.CLEARED{color:var(--green);background:rgba(53,181,138,.09)}.ESCALATED{color:var(--red);background:rgba(221,92,92,.09)}
+.PENDING_CONFIRMATION{color:var(--amber);background:rgba(201,151,63,.09)}.RECEIVED,.TRIAGED{color:var(--blue);background:rgba(91,141,217,.09)}
+.CANCELLED{color:var(--mut);background:rgba(143,153,168,.09)}
+.detail{overflow-y:auto;padding:22px 26px;min-height:0}
 .empty{color:var(--mut);text-align:center;margin-top:14vh}
 .msg{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:8px;padding:12px 14px;margin:14px 0;font-size:14.5px}
 .meta{color:var(--mut);font-size:13px}
-.btn{border:0;border-radius:9px;padding:10px 16px;font:inherit;font-weight:650;cursor:pointer}
-.btn.go{background:linear-gradient(120deg,#2563eb,#4f46e5);color:#fff}
-.btn.go:disabled{opacity:.5;cursor:wait}
-.btn.green{background:#059669;color:#fff}.btn.danger{background:#b91c1c;color:#fff}.btn.ghost{background:var(--panel);color:var(--mut);border:1px solid var(--line)}
+.btn{border:1px solid var(--line);border-radius:8px;padding:9px 16px;font:inherit;font-weight:600;cursor:pointer;background:var(--panel);color:var(--tx);transition:filter .12s}
+.btn:hover{filter:brightness(1.15)}.btn:active{filter:brightness(.92)}
+.btn.go{background:var(--blue);border-color:var(--blue);color:#0a0c10}
+.btn.go:disabled{opacity:.55;cursor:wait}
+.btn.green{background:var(--green);border-color:var(--green);color:#0a0c10}.btn.danger{background:var(--red);border-color:var(--red);color:#0a0c10}
+.btn.ghost{color:var(--mut)}
 .actions{display:flex;gap:9px;margin-top:16px;align-items:center}
-.spinner{width:14px;height:14px;border:2px solid #fff;border-right-color:transparent;border-radius:50%;animation:sp 1s linear infinite;display:none}
+.spinner{width:13px;height:13px;border:2px solid #0a0c10;border-right-color:transparent;border-radius:50%;animation:sp .9s linear infinite;display:none}
 @keyframes sp{to{transform:rotate(360deg)}}
-.verdict{margin-top:16px;border-radius:10px;padding:13px 15px;border:1px solid var(--line);background:var(--panel);display:none}
-.verdict .v{font-weight:800;font-size:16px}.verdict .e{margin-top:4px;font-size:14px;color:var(--tx)}
-.chain{margin-top:20px}
-.chain h3{font-size:12px;letter-spacing:1.5px;color:var(--mut);margin-bottom:10px}
-.step{display:flex;gap:12px;padding:9px 0;border-bottom:1px dashed var(--line)}
-.dot{width:9px;height:9px;border-radius:50%;margin-top:7px;flex:none}
+.verdict{margin-top:16px;border-radius:9px;padding:13px 15px;border:1px solid var(--line);background:var(--panel)}
+.verdict .v{font-weight:700;font-size:15px;letter-spacing:.02em}.verdict .e{margin-top:4px;font-size:14px}
+.chain{margin-top:22px}
+.chain h3{font-size:11.5px;letter-spacing:.08em;color:var(--mut);margin-bottom:10px;font-weight:600}
+.step{display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)}
+.dot{width:8px;height:8px;border-radius:50%;margin-top:8px;flex:none}
 .pulse{animation:pul 1.1s ease-in-out infinite}@keyframes pul{50%{opacity:.2}}
-.actor{font-weight:700;font-size:12.5px;text-transform:uppercase;letter-spacing:.5px;min-width:58px;margin-top:3px}
-.sdetail{font-size:13.5px;color:#c6cfdd}
-.t_ac_llm{background:var(--violet)}.t_ac_llm2{color:var(--violet)}
+.actor{font-weight:650;font-size:12px;letter-spacing:.02em;min-width:58px;margin-top:4px;font-family:ui-monospace,Menlo,Consolas,monospace}
+.sdetail{font-size:13.5px;color:#c3cad6}
+.t_ac_llm{background:var(--cyan)}.t_ac_llm2{color:var(--cyan)}
 .t_ac_tool{background:var(--blue)}.t_ac_tool2{color:var(--blue)}
 .t_ac_guard{background:var(--red)}.t_ac_guard2{color:var(--red)}
 .t_ac_system{background:var(--mut)}.t_ac_system2{color:var(--mut)}
 .t_ac_human{background:var(--green)}.t_ac_human2{color:var(--green)}
 .t_ac_agent{background:var(--amber)}.t_ac_agent2{color:var(--amber)}
 footer{border-top:1px solid var(--line);padding:9px 20px;font-size:12.5px;color:var(--mut);display:flex;gap:18px;align-items:center;white-space:nowrap;overflow:hidden}
-.bc{animation:fadein .5s}@keyframes fadein{from{opacity:0;transform:translateY(6px)}}
-.toast{position:fixed;right:18px;bottom:64px;max-width:420px;background:#7f1d1d;border:1px solid var(--red);color:#fff;padding:11px 14px;border-radius:10px;font-size:13px;display:none;box-shadow:0 12px 30px rgba(0,0,0,.5)}
-.modalbg{position:fixed;inset:0;background:rgba(4,6,10,.72);display:none;place-items:center;z-index:9}
-.modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px;max-width:520px;width:92%}
-.modal h2{font-size:16px;margin-bottom:6px}.modal p{color:var(--mut);font-size:13.5px;margin-bottom:16px}
-.kbd{font-size:11px;color:var(--mut)}.kbd code{background:var(--panel);padding:1px 6px;border-radius:5px;border:1px solid var(--line)}
+.bc{animation:fadein .4s}@keyframes fadein{from{opacity:0}}
+.toast{position:fixed;right:18px;bottom:64px;max-width:420px;background:var(--panel);border:1px solid var(--red);color:var(--tx);padding:11px 14px;border-radius:9px;font-size:13px;display:none}
+.modalbg{position:fixed;inset:0;background:rgba(5,7,10,.72);display:none;place-items:center;z-index:9}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:22px;max-width:520px;width:92%}
+.modal h2{font-size:15.5px;margin-bottom:6px}.modal p{color:var(--mut);font-size:13.5px;margin-bottom:16px}
 </style></head>
 <body>
 <header>
   <div class="logo">P</div>
-  <div><h1>PocketPay <b>Campus Shield</b></h1><div class="sub">the LLM guesses · the code decides · your money moves only through both</div></div>
+  <div><h1>PocketPay <span style="color:var(--mut);font-weight:500">/ Campus Shield</span></h1><div class="sub">Autonomous fraud triage with human-held authority</div></div>
   <div class="stats" id="stats"></div>
 </header>
 <main>
   <section class="queue">
-    <div class="searchbox"><input id="q" placeholder="🔍 search student / txn / purpose…"></div>
+    <div class="searchbox"><input id="q" placeholder="Search by student, transaction, or purpose"></div>
     <div class="pills" id="pills"></div>
     <div class="list" id="list"></div>
     <div class="searchbox" style="border-bottom:0;border-top:1px solid var(--line)">
-      <input id="adhoc" placeholder="🚩 paste a shady message a judge says…">
-      <button class="btn go" id="report" style="flex:none">Triage live</button>
+      <input id="adhoc" placeholder="Paste a suspicious message to triage live">
+      <button class="btn go" id="report" style="flex:none">Run live check</button>
     </div>
   </section>
-  <section class="detail" id="detail"><div class="empty">← pick a flagged transaction.<br><br>the agent chain, the LLM's opinion and the guard's verdict<br>all appear here as an audit trail.</div></section>
+  <section class="detail" id="detail"><div class="empty">Select a flagged transaction.<br><br>The decision log, the model's risk assessment and the guard's verdict<br>appear here as a complete audit trail.</div></section>
 </main>
-<footer><span><span class="kbd" style="color:var(--mut)">chain legend:</span> <span style="color:var(--blue)">■ tools/facts</span> <span style="color:var(--violet)">■ LLM opinion</span> <span style="color:var(--red)">■ guard decision</span> <span style="color:var(--green)">■ human</span></span><span id="feed" class="bc" style="text-overflow:ellipsis;overflow:hidden"></span></footer>
+<footer><span><span style="color:var(--mut)">Audit trail:</span> <span style="color:var(--blue)">tools (facts)</span> <span style="color:var(--cyan)">LLM (opinion)</span> <span style="color:var(--red)">guard (decision)</span> <span style="color:var(--green)">human (response)</span></span><span id="feed" class="bc" style="text-overflow:ellipsis;overflow:hidden"></span></footer>
 <div class="toast" id="toast"></div>
 <div class="modalbg" id="modalbg"><div class="modal">
   <h2>Do you know this seller?</h2><p id="mtext"></p>
-  <div class="actions"><button class="btn green" id="mconfirm">Confirm I know them</button><button class="btn danger" id="mcancel">Cancel transfer</button><button class="btn ghost" onclick="closeModal()">Later</button></div>
+  <div class="actions"><button class="btn go" id="mconfirm">Confirm I know them</button><button class="btn danger" id="mcancel">Cancel transfer</button><button class="btn ghost" onclick="closeModal()">Not now</button></div>
 </div></div>
 <script>
 let ALL=[], FILTER="ALL", Q="", SEL="", LAST_V=null, LAST_N=-1;
@@ -219,7 +223,7 @@ function render(){renderStats();renderPills();const q=Q.toLowerCase();
    <div class="who">${t.student} → ${t.recipient_id} · ${t.purpose}</div></div>`).join("")||`<div class="empty" style="margin-top:30px">nothing here</div>`}
 async function refresh(){ALL=(await api("/api/state")).transactions;render()}
 function chainHtml(log){return log.map(s=>`<div class="step"><span class="dot t_ac_${s.actor}"></span><span class="actor t_ac_${s.actor}2">${s.actor}</span><div><b style="font-size:13px">${s.step}</b><div class="sdetail">${esc(s.detail)}</div></div></div>`).join("")}
-const GHOST=`<div class="step"><span class="dot t_ac_llm pulse"></span><span class="actor t_ac_llm2">llm</span><div><b style="font-size:13px">reading the message…</b><div class="sdetail" style="color:var(--mut)">the brain is thinking. this is the slow part — everything after it takes milliseconds.</div></div></div>`;
+const GHOST=`<div class="step"><span class="dot t_ac_llm pulse"></span><span class="actor t_ac_llm2">llm</span><div><b style="font-size:13px">Reading message — model inference in progress</b><div class="sdetail" style="color:var(--mut)">All remaining steps commit in milliseconds once the assessment lands.</div></div></div>`;
 async function openTxn(id){SEL=id;render();const d=await api("/api/txn?id="+id);const t=d.txn;
  LAST_N=d.log.length;
  const pending=t.state=="PENDING_CONFIRMATION";
@@ -230,10 +234,10 @@ async function openTxn(id){SEL=id;render();const d=await api("/api/txn?id="+id);
   <div class="msg">${esc(t.message)}</div>
   <div class="actions">
     <button class="btn go" id="tri" onclick="triage('${t.txn_id}')"><span class="spinner" id="sp"></span>&nbsp;Run agent chain</button>
-    ${pending?`<button class="btn green" onclick="openModal('${t.txn_id}')">🙋 Answer as the student</button>`:""}
+    ${pending?`<button class="btn green" onclick="openModal('${t.txn_id}')">Respond as student</button>`:""}
   </div>
   ${v}
-  <div class="chain"><h3>DECISION LOG — every step, in order, no black boxes</h3><div id="chainlist">${chainHtml(d.log)||"<div class='meta'>no chain yet — hit ‘Run agent chain’.</div>"}</div></div>`}
+  <div class="chain"><h3>DECISION LOG</h3><div id="chainlist">${chainHtml(d.log)||"<div class='meta'>No chain yet. Run the agent to generate the audit trail.</div>"}</div></div>`}
 function vcol(a){return (a=="CLEAR"||a=="CLEARED")?"var(--green)":a=="ESCALATED"?"var(--red)":a=="CANCELLED"?"var(--mut)":"var(--amber)"}
 function esc(s){return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
 async function triage(id){const b=document.getElementById("tri");b.disabled=true;document.getElementById("sp").style.display="inline-block";
@@ -245,10 +249,10 @@ async function triage(id){const b=document.getElementById("tri");b.disabled=true
  LAST_V={id,r};
  await refresh();openTxn(id);
  if(r.action=="ESCALATED")ping();}
-function openModal(id){document.getElementById("modalbg").style.display="grid";document.getElementById("mtext").textContent=`Transaction ${id}: confirm and the money moves now, cancel and it's reported. The guard logs your answer and nothing else can decide for you.`;document.getElementById("mconfirm").onclick=()=>answer(id,"confirm");document.getElementById("mcancel").onclick=()=>answer(id,"cancel")}
+function openModal(id){document.getElementById("modalbg").style.display="grid";document.getElementById("mtext").textContent=`Transaction ${id}. Confirm releases the transfer immediately; cancel stops it and reports the seller. Your answer is logged, and no other component can decide this for you.`;document.getElementById("mconfirm").onclick=()=>answer(id,"confirm");document.getElementById("mcancel").onclick=()=>answer(id,"cancel")}
 function closeModal(){document.getElementById("modalbg").style.display="none"}
 async function answer(id,c){const r=await api("/api/resolve",{txn_id:id,choice:c});closeModal();await refresh();openTxn(id)}
-async function ping(){const s=await api("/api/state");if(s.broadcasts.length){document.getElementById("feed").textContent="🔊 "+s.broadcasts[0].message;const t=document.getElementById("toast");t.textContent=s.broadcasts[0].message;t.style.display="block";setTimeout(()=>t.style.display="none",6000)}}
+async function ping(){const s=await api("/api/state");if(s.broadcasts.length){document.getElementById("feed").textContent="ALERT — "+s.broadcasts[0].message;const t=document.getElementById("toast");t.textContent=s.broadcasts[0].message;t.style.display="block";setTimeout(()=>t.style.display="none",6000)}}
 document.getElementById("q").oninput=e=>{Q=e.target.value;render()};
 document.getElementById("report").onclick=async()=>{const m=document.getElementById("adhoc").value.trim();if(!m)return;
  const b=document.getElementById("report");b.disabled=true;b.textContent="agent working…";
