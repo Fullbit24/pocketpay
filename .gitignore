@@ -1,3 +1,4 @@
 .env
 __pycache__/
 sessions/
+campus_wallet_logs.sqlite
