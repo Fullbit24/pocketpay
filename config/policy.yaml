@@ -1,11 +1,11 @@
-# policy.yaml - POCKETPAY decision policy.
+# policy.yaml - VENATOR decision policy.
 #
 # EVERY number and toggles the guard reads lives in this file. No threshold is
 # hard-coded anywhere in Python. Change a value here, restart, and the system
 # behaves differently - which is what "do not hard-code it" means.
 #
 # The guard rule order is defined in `rules:` at the bottom. Each entry is a
-# module in `pocketpay/rules/`. Remove one to switch it off; the system still runs.
+# module in `venator/rules/`. Remove one to switch it off; the system still runs.
 
 version: 3
 currency: AED
@@ -125,7 +125,7 @@ services:
   directory_timeout_seconds: 4.0
 
 # ---------------------------------------------------------------------------
-# Rule order - first match wins. Names map to pocketpay/rules/*.py
+# Rule order - first match wins. Names map to venator/rules/*.py
 # ---------------------------------------------------------------------------
 rules:
   - known_scam_link        # R1

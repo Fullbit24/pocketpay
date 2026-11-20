@@ -1,0 +1,1581 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Venator</title>
+<meta name="description" content="Venator operations console: payment triage queue, agent audit trail, escalations and policy control for the campus wallet.">
+<!--THEME-->
+<style>
+/* Shell layout specific to Venator. Every colour, size and surface comes
+   from the theme's :root tokens; nothing here redefines the palette. */
+
+/* --- structural shell --- */
+.app{flex:1;display:flex;flex-direction:column;min-height:0}
+
+/* --- top bar KPI strip --- */
+.topkpi{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.topkpi .kpi{min-width:74px}
+@media(max-width:1180px){.topkpi .kpi{min-width:62px}}
+.brandmark{display:block;flex:none}
+.statuspill{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:600;
+  letter-spacing:.05em;text-transform:uppercase;color:var(--ink-2);
+  background:rgba(255,255,255,.55);border:1px solid var(--steel-line);border-radius:999px;
+  padding:5px 11px;white-space:nowrap}
+
+/* --- sidebar home mark / group chevrons --- */
+.homemark{width:100%;display:flex;align-items:center;gap:11px;min-height:52px;padding:6px 10px;
+  border:0;border-radius:9px;background:transparent;cursor:pointer;text-align:left}
+.homemark:hover{background:rgba(255,255,255,.55)}
+.homemark .sm{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:18px;
+  letter-spacing:.22em;padding-left:.22em;text-transform:uppercase;color:var(--mark)}
+.gbtn .car{margin-left:auto;transition:transform .16s;color:var(--ink-3);flex:none}
+.gbtn[aria-expanded="true"] .car{transform:rotate(90deg)}
+.gbtn .car svg{display:block}
+.sidegroup{display:flex;flex-direction:column;gap:2px;margin:2px 0 8px}
+
+/* --- main scroll region --- */
+.view{display:flex;flex-direction:column;min-height:0;flex:1}
+.pagebody{display:flex;flex-direction:column;gap:18px}
+.pagebody[hidden]{display:none}
+
+/* --- home state --- */
+#pageHome{padding:0}
+
+/* --- panels / two-column layout --- */
+.cols{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start}
+.colmain{flex:1.6 1 460px;min-width:0}
+.colside{flex:1 1 300px;min-width:0}
+.stack{display:flex;flex-direction:column;gap:18px;min-width:0}
+
+/* --- filter toolbar --- */
+.toolbar{display:flex;flex-wrap:wrap;gap:12px;align-items:center;
+  padding:12px 0;border-bottom:1px solid var(--hair)}
+.toolbar .pills{flex:1 1 auto}
+.searchbox{flex:0 1 280px;min-width:180px;display:flex;gap:8px;align-items:center}
+.searchbox input{min-height:40px;padding:7px 12px}
+.counter{font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+
+/* --- divider rows (preferred over tiles) --- */
+.rows{display:flex;flex-direction:column}
+.row{display:flex;gap:14px;align-items:flex-start;padding:11px 16px;
+  border-bottom:1px solid var(--hair)}
+.row:last-child{border-bottom:0}
+.row .rmain{flex:1;min-width:0}
+.row .rt{font-weight:600;font-size:14.5px;display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.row .rs{font-size:13.5px;color:var(--ink-2);line-height:1.5;margin-top:2px}
+.row .rmeta{flex:none;text-align:right;font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.row .amt{font-weight:600;color:var(--ink)}
+.idlink{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:600;
+  color:var(--teal);text-decoration:none;border-bottom:1px solid transparent}
+.idlink:hover{border-bottom-color:var(--teal)}
+
+/* --- pressure meter row --- */
+.press{display:grid;grid-template-columns:minmax(0,1fr) 130px 52px;gap:12px;align-items:center;
+  padding:10px 16px;border-bottom:1px solid var(--hair);font-size:14px}
+.press:last-child{border-bottom:0}
+.press .barmeta{font-size:12.5px;color:var(--ink-3)}
+.meter.tall{height:8px}
+
+/* --- key/value grid for detail --- */
+.kv{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-size:14px}
+.kv dt{color:var(--ink-3);font-size:12px;letter-spacing:.06em;text-transform:uppercase;
+  font-weight:600;padding-top:2px}
+.kv dd{font-weight:500}
+.dl{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:14.5px;padding:0}
+
+/* --- chat panel (admin agent) --- */
+.chat{display:flex;flex-direction:column;gap:0}
+.chatlog{display:flex;flex-direction:column;gap:14px;padding:16px;max-height:none}
+.bubble{max-width:74%;padding:11px 14px;border-radius:12px;font-size:14.5px;line-height:1.5}
+.bubble.me{align-self:flex-end;background:var(--teal-soft);border:1px solid #8FB5B2;color:#0B4F55}
+.bubble.bot{align-self:flex-start;background:#F7F9FA;border:1px solid var(--panel-line)}
+.bubble .who{display:block;font-size:11px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;margin-bottom:4px;color:var(--ink-3)}
+.chatform{display:flex;gap:10px;align-items:flex-end;padding:14px 16px;
+  border-top:1px solid var(--panel-line);background:#F7F9FA}
+.chatform textarea{min-height:52px}
+.suggest{display:flex;flex-wrap:wrap;gap:7px;padding:0 16px 14px}
+.suggest .pill{min-height:32px;font-size:13px}
+
+/* --- inline notice --- */
+.notice{display:flex;gap:9px;align-items:flex-start;font-size:13.5px;line-height:1.5;
+  border-radius:9px;padding:10px 13px;margin:0 0 4px}
+.notice[data-tone="info"]{background:#EEF1F4;border:1px solid var(--panel-line);color:var(--ink-2)}
+.notice[data-tone="warn"]{background:var(--md-bg);border:1px solid var(--amber-line);color:var(--md-tx)}
+.notice[data-tone="bad"]{background:var(--hi-bg);border:1px solid #C08A7E;color:var(--hi-tx)}
+.notice[data-tone="ok"]{background:var(--lo-bg);border:1px solid #8FB5B2;color:var(--lo-tx)}
+.quiet{font-size:13px;color:var(--ink-3)}
+
+/* --- policy console specifics --- */
+.mono-sm{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px}
+.editgrid{display:grid;grid-template-columns:minmax(0,1fr) 130px auto;gap:10px;align-items:end}
+.editgrid label{display:flex;flex-direction:column;gap:4px}
+.edithint{font-size:12.5px;color:var(--ink-3);margin:0 0 8px}
+
+/* --- escalation columns --- */
+.esccols{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start}
+.esccols>.card{flex:1 1 320px;min-width:0}
+.hcount{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;
+  color:var(--ink-2);letter-spacing:.04em}
+
+/* --- stage tracker --- */
+.stages{display:flex;flex-wrap:wrap;gap:0;margin:0 0 4px}
+.stage{flex:1 1 0;min-width:96px;padding:10px 12px;border-right:1px solid var(--hair);
+  border-top:3px solid var(--hair)}
+.stage:last-child{border-right:0}
+.stage i{font-style:normal;display:block;font-size:11px;font-weight:600;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--ink-3)}
+.stage b{display:block;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:20px;
+  line-height:1.1;margin-top:2px}
+.stage[data-on="1"]{border-top-color:var(--amber);background:#FBFAF4}
+.stage[data-on="1"] b{color:var(--ink)}
+
+/* --- action row under a case --- */
+.actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:14px}
+.actions .btn{flex:0 0 auto}
+
+/* --- responsive: stack sidebar above content --- */
+@media(max-width:1000px){
+  .topkpi{width:100%;justify-content:flex-start}
+  .side{flex:1 1 100%;max-height:70vh}
+  .topbar{flex-wrap:wrap;padding:10px 16px}
+}
+@media(max-width:600px){
+  .press{grid-template-columns:minmax(0,1fr) 54px}
+  .press .barmeta{display:none}
+  .kv{grid-template-columns:1fr;gap:2px}
+  .kv dt{padding-top:8px}
+  .editgrid{grid-template-columns:1fr}
+  .bubble{max-width:92%}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ============================= TOP BAR ============================= -->
+  <header class="topbar">
+    <button class="brandlink" id="brandHome" aria-label="Venator home">
+      <svg class="brandmark" width="34" height="34" viewBox="0 0 36 36" fill="none" role="img" aria-hidden="true">
+        <path d="M18 2L32 10V26L18 34L4 26V10Z" stroke="#2F3A45" stroke-width="1.5"/>
+        <path d="M12 12.5h8.5a5.5 5.5 0 0 1 0 11H12Z" stroke="#2F3A45" stroke-width="2.2" stroke-linejoin="round"/>
+        <circle cx="18.5" cy="18" r="2" fill="#F2A900"/>
+      </svg>
+      <span class="wordmark">Venator</span>
+    </button>
+
+    <div class="brandsub">
+      <b>Operations console</b>
+      <span>Campus wallet &middot; payment triage</span>
+    </div>
+
+    <div class="topright topkpi">
+      <div class="kpi"><i>Received</i><b id="kpiReceived">--</b></div>
+      <div class="kpi"><i>Held</i><b id="kpiHeld">--</b></div>
+      <div class="kpi"><i>Escalated</i><b id="kpiEscalated">--</b></div>
+      <div class="kpi"><i>Cleared</i><b id="kpiCleared">--</b></div>
+      <div class="who">
+        <b>Operations desk</b>
+        <span id="whoRole">Signed in &middot; reviewer</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============================= SHELL ============================= -->
+  <div class="shell">
+
+    <!-- ---------- sidebar ---------- -->
+    <nav class="side" aria-label="Primary">
+      <button class="homemark" id="sideHome" aria-label="Venator home">
+        <svg width="30" height="30" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+          <path d="M18 2L32 10V26L18 34L4 26V10Z" stroke="#2F3A45" stroke-width="1.6"/>
+          <path d="M12 12.5h8.5a5.5 5.5 0 0 1 0 11H12Z" stroke="#2F3A45" stroke-width="2.2" stroke-linejoin="round"/>
+          <circle cx="18.5" cy="18" r="2" fill="#F2A900"/>
+        </svg>
+        <span class="sm">Venator</span>
+      </button>
+
+      <div class="gsep" style="margin-top:8px"></div>
+
+      <div class="sidegroup" data-group="operations">
+        <button class="gbtn" data-toggle="operations" aria-expanded="true" aria-controls="nav-operations">
+          Operations
+          <span class="car" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4 2l4 4-4 4" stroke="#4B5763" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </button>
+        <div class="navwrap" id="nav-operations">
+          <button class="nav" data-page="overview">Overview</button>
+          <button class="nav" data-page="queue">Queue</button>
+          <button class="nav" data-page="runs">Agent runs</button>
+          <button class="nav" data-page="escalations">Escalations</button>
+        </div>
+      </div>
+
+      <div class="sidegroup" data-group="governance">
+        <button class="gbtn" data-toggle="governance" aria-expanded="true" aria-controls="nav-governance">
+          Governance
+          <span class="car" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4 2l4 4-4 4" stroke="#4B5763" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        </button>
+        <div class="navwrap" id="nav-governance">
+          <button class="nav" data-page="policy">Policy</button>
+          <button class="nav" data-page="admin">Admin agent</button>
+        </div>
+      </div>
+
+      <div class="sidefoot">
+        <button class="cta" id="ctaTriageNew" aria-label="Open the queue to triage the newest held payment">
+          Triage held queue
+        </button>
+        <div class="sysstat">
+          <em><span class="pip" id="healthPip" aria-hidden="true"></span><span id="healthText">Connecting to the API&hellip;</span></em>
+          <span id="healthSub">Policy version loaded at start.</span>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ---------- main ---------- -->
+    <main class="main" id="main" tabindex="-1">
+
+      <!-- HOME STATE -->
+      <section class="home" id="pageHome" aria-label="Venator">
+        <svg width="176" height="176" viewBox="0 0 36 36" fill="none" role="img" aria-label="Venator mark">
+          <path d="M18 2L32 10V26L18 34L4 26V10Z" stroke="#2F3A45" stroke-width="1.2"/>
+          <path d="M12 12.5h8.5a5.5 5.5 0 0 1 0 11H12Z" stroke="#2F3A45" stroke-width="1.8" stroke-linejoin="round"/>
+          <circle cx="18.5" cy="18" r="1.6" fill="#F2A900"/>
+        </svg>
+        <div class="w">Venator</div>
+      </section>
+
+      <!-- ===================== OVERVIEW ===================== -->
+      <section class="pagebody" id="page-overview" aria-labelledby="ovTitle" hidden>
+        <div class="head">
+          <div>
+            <div class="crumb">Operations / Overview</div>
+            <h1 id="ovTitle">Overview</h1>
+            <p>The live picture of the campus wallet: what the queue is holding, how the agent chain is deciding, and the latest alerts broadcast to students.</p>
+          </div>
+          <div class="headact">
+            <span class="quiet" id="ovUpdated">Not yet refreshed</span>
+            <button class="btn" id="ovRefresh">Refresh</button>
+          </div>
+        </div>
+
+        <div id="ovNotice"></div>
+
+        <div class="strip" id="ovStrip" aria-label="Key figures"></div>
+
+        <div class="cols">
+          <div class="stack colmain">
+            <section class="card">
+              <h2 class="cardhead">Queue pressure <span class="r" id="ovQueueCount"></span></h2>
+              <div class="rows" id="ovQueue"></div>
+            </section>
+
+            <section class="card">
+              <h2 class="cardhead">Recent decisions <span class="r">Newest first</span></h2>
+              <div class="scrollx">
+                <table class="tbl">
+                  <thead>
+                    <tr><th scope="col">ID</th><th scope="col">Student</th><th scope="col">Recipient</th>
+                        <th scope="col" class="num">Amount</th><th scope="col">State</th></tr>
+                  </thead>
+                  <tbody id="ovRecent"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+
+          <div class="stack colside">
+            <section class="card">
+              <h2 class="cardhead">Latest alerts <span class="r">Broadcasts</span></h2>
+              <div class="rows" id="ovBroadcasts"></div>
+            </section>
+
+            <section class="card">
+              <h2 class="cardhead">System</h2>
+              <div class="pad">
+                <dl class="kv" id="ovHealth"></dl>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== QUEUE ===================== -->
+      <section class="pagebody" id="page-queue" aria-labelledby="qTitle" hidden>
+        <div class="head">
+          <div>
+            <div class="crumb">Operations / Queue</div>
+            <h1 id="qTitle">Transaction queue</h1>
+            <p>Every incoming payment with the agent's risk reading. Filter by state, search by student, recipient or transaction ID, then open a case to review the decision chain.</p>
+          </div>
+          <div class="headact">
+            <button class="btn" id="qRefresh">Refresh</button>
+          </div>
+        </div>
+
+        <div id="qNotice"></div>
+
+        <div class="toolbar">
+          <div class="pills" id="qPills" role="group" aria-label="Filter by state">
+            <button class="pill" data-state="ALL" aria-pressed="true">All</button>
+            <button class="pill" data-state="RECEIVED" aria-pressed="false">Received</button>
+            <button class="pill" data-state="TRIAGED" aria-pressed="false">Triaged</button>
+            <button class="pill" data-state="PENDING_CONFIRMATION" aria-pressed="false">Pending confirmation</button>
+            <button class="pill" data-state="PENDING_GUARDIAN" aria-pressed="false">Pending guardian</button>
+            <button class="pill" data-state="ESCALATED" aria-pressed="false">Escalated</button>
+            <button class="pill" data-state="CLEAR" aria-pressed="false">Clear</button>
+            <button class="pill" data-state="CLEARED" aria-pressed="false">Cleared</button>
+            <button class="pill" data-state="CANCELLED" aria-pressed="false">Cancelled</button>
+          </div>
+          <div class="searchbox">
+            <input type="search" id="qSearch" placeholder="Search ID, student, recipient" aria-label="Search transactions">
+            <button class="btn sm" id="qSearchGo">Search</button>
+          </div>
+          <span class="counter" id="qCount"></span>
+        </div>
+
+        <section class="card">
+          <div class="scrollx">
+            <table class="tbl">
+              <thead>
+                <tr>
+                  <th scope="col">ID</th>
+                  <th scope="col">Student</th>
+                  <th scope="col">Age</th>
+                  <th scope="col">Recipient</th>
+                  <th scope="col" class="num">Amount (AED)</th>
+                  <th scope="col">State</th>
+                  <th scope="col">Verdict</th>
+                </tr>
+              </thead>
+              <tbody id="qRows"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <!-- ===================== AGENT RUNS ===================== -->
+      <section class="pagebody" id="page-runs" aria-labelledby="rTitle" hidden>
+        <div class="head">
+          <div>
+            <div class="crumb">Operations / Agent runs</div>
+            <h1 id="rTitle">Agent runs</h1>
+            <p>The decision chain for one transaction, step by step: which tool ran, what the model proposed, what the guard permitted, and who finally decided.</p>
+          </div>
+          <div class="headact">
+            <button class="btn go" id="rTriage">Run triage chain</button>
+            <button class="btn" id="rRefresh">Reload case</button>
+          </div>
+        </div>
+
+        <div id="rNotice"></div>
+
+        <div class="toolbar">
+          <label class="quiet" for="rCaseSelect" style="font-weight:600">Case</label>
+          <div class="searchbox" style="flex:0 1 320px">
+            <select id="rCaseSelect" aria-label="Select a transaction to inspect"></select>
+          </div>
+          <span class="counter" id="rCaseMeta"></span>
+        </div>
+
+        <div class="cols">
+          <div class="stack colmain">
+            <section class="card">
+              <h2 class="cardhead">Decision chain <span class="r" id="rTrailCount"></span></h2>
+              <div class="pad">
+                <div class="tl" id="rTrail"></div>
+              </div>
+            </section>
+          </div>
+
+          <div class="stack colside">
+            <section class="card">
+              <h2 class="cardhead">Case</h2>
+              <div class="pad">
+                <dl class="kv" id="rCase"></dl>
+              </div>
+            </section>
+
+            <section class="card">
+              <h2 class="cardhead">Agent findings</h2>
+              <div class="pad">
+                <div class="find">
+                  <span class="chip c-nu tag">Risk</span>
+                  <span class="tx" id="rFindRisk">No risk score recorded.</span>
+                  <span class="cf" id="rFindRiskCf"></span>
+                </div>
+                <div class="find">
+                  <span class="chip c-nu tag">Confidence</span>
+                  <span class="tx" id="rFindConf">No confidence recorded.</span>
+                  <span class="cf" id="rFindConfV"></span>
+                </div>
+                <div class="find">
+                  <span class="chip c-nu tag">Decision</span>
+                  <span class="tx" id="rFindDec">The case has not been decided.</span>
+                </div>
+              </div>
+              <div class="pad" style="padding-top:0">
+                <p class="label">Explanation</p>
+                <p class="msg" id="rExplanation" style="margin-top:6px">No explanation recorded for this case.</p>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== ESCALATIONS ===================== -->
+      <section class="pagebody" id="page-escalations" aria-labelledby="eTitle" hidden>
+        <div class="head">
+          <div>
+            <div class="crumb">Operations / Escalations</div>
+            <h1 id="eTitle">Escalations</h1>
+            <p>Payments waiting on a person, grouped by whose decision is required. Nothing here is frozen: each item has an action that clears it.</p>
+          </div>
+          <div class="headact">
+            <span class="quiet" id="eUpdated"></span>
+            <button class="btn" id="eRefresh">Refresh</button>
+          </div>
+        </div>
+
+        <div id="eNotice"></div>
+
+        <div class="strip" id="eStrip" aria-label="Escalation totals"></div>
+
+        <div class="esccols">
+          <section class="card">
+            <h2 class="cardhead">Student confirmation <span class="r" id="eCountConf">0</span></h2>
+            <div class="rows" id="eStudent"></div>
+          </section>
+
+          <section class="card">
+            <h2 class="cardhead">Guardian approval <span class="r" id="eCountGuard">0</span></h2>
+            <div class="rows" id="eGuardian"></div>
+          </section>
+
+          <section class="card">
+            <h2 class="cardhead">Staff review <span class="r" id="eCountStaff">0</span></h2>
+            <div class="rows" id="eStaff"></div>
+          </section>
+        </div>
+      </section>
+
+      <!-- ===================== POLICY ===================== -->
+      <section class="pagebody" id="page-policy" aria-labelledby="pTitle" hidden>
+        <div class="head">
+          <div>
+            <div class="crumb">Governance / Policy</div>
+            <h1 id="pTitle">Policy console</h1>
+            <p>The thresholds the engine reads at decision time and the order the rules run in. Values are live: a change here takes effect on the next decision and is written to the audit log.</p>
+          </div>
+          <div class="headact">
+            <span class="statuspill" id="pVersion">Policy v&ndash;</span>
+            <button class="btn" id="pRefresh">Reload</button>
+          </div>
+        </div>
+
+        <div id="pNotice"></div>
+
+        <div class="cols">
+          <div class="stack colmain">
+            <section class="card">
+              <h2 class="cardhead">Active thresholds <span class="r">Read only</span></h2>
+              <div class="scrollx">
+                <table class="tbl">
+                  <thead>
+                    <tr><th scope="col">Key</th><th scope="col" class="num">Value</th><th scope="col">Type</th></tr>
+                  </thead>
+                  <tbody id="pThresholds"></tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="card">
+              <h2 class="cardhead">Rule order <span class="r" id="pRuleCount"></span></h2>
+              <div class="pad">
+                <div class="tl" id="pRules"></div>
+              </div>
+            </section>
+          </div>
+
+          <div class="stack colside">
+            <section class="card">
+              <h2 class="cardhead">Edit a threshold</h2>
+              <div class="pad">
+                <p class="edithint">Only scalar thresholds can be changed. The rule order and the file structure cannot be edited through the console.</p>
+                <form id="pForm" novalidate>
+                  <label style="margin-bottom:10px">
+                    <span class="label">Key</span>
+                    <select id="pKey" aria-label="Policy key to change"></select>
+                  </label>
+                  <div class="editgrid">
+                    <label>
+                      <span class="label">New value</span>
+                      <input type="text" id="pValue" inputmode="decimal" autocomplete="off" aria-label="New value">
+                    </label>
+                    <label>
+                      <span class="label">Actor</span>
+                      <input type="text" id="pActor" value="ops-desk" autocomplete="off" aria-label="Actor recording the change">
+                    </label>
+                    <button class="btn go" type="submit" id="pSubmit">Apply change</button>
+                  </div>
+                </form>
+                <div id="pFormNotice" style="margin-top:12px"></div>
+              </div>
+            </section>
+
+            <section class="card">
+              <h2 class="cardhead">Recent policy activity</h2>
+              <div class="rows" id="pActivity"></div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== ADMIN ===================== -->
+      <section class="pagebody" id="page-admin" aria-labelledby="aTitle" hidden>
+        <div class="head">
+          <div>
+            <div class="crumb">Governance / Admin agent</div>
+            <h1 id="aTitle">Admin agent</h1>
+            <p>Ask the operations agent about the running system. It answers from live policy, queue state and the audit log, and it never changes anything on its own.</p>
+          </div>
+          <div class="headact">
+            <span class="quiet" id="aBriefed"></span>
+          </div>
+        </div>
+
+        <div id="aNotice"></div>
+
+        <div class="cols">
+          <div class="stack colmain">
+            <section class="card">
+              <h2 class="cardhead">Conversation</h2>
+              <div class="chat">
+                <div class="chatlog" id="aLog"></div>
+                <div class="suggest" id="aSuggest"></div>
+                <form class="chatform" id="aForm">
+                  <label style="flex:1;min-width:0">
+                    <span class="label" style="display:block;margin-bottom:5px">Ask the agent</span>
+                    <textarea id="aInput" placeholder="e.g. Which rules are active and in what order?" aria-label="Question for the admin agent"></textarea>
+                  </label>
+                  <button class="btn go" type="submit" id="aSend">Ask</button>
+                </form>
+              </div>
+            </section>
+          </div>
+
+          <div class="stack colside">
+            <section class="card">
+              <h2 class="cardhead">Briefing <span class="r" id="aBriefMeta"></span></h2>
+              <div class="pad">
+                <dl class="kv" id="aBrief"></dl>
+              </div>
+            </section>
+
+            <section class="card">
+              <h2 class="cardhead">Awaiting a human</h2>
+              <div class="rows" id="aAwaiting"></div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <footer class="footbar">
+    <span class="legend"><i><span class="pip" aria-hidden="true"></span>Connected</i></span>
+    <span id="footPolicy">Policy v&ndash;</span>
+    <span id="footCount">0 transactions in view</span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ------------------------------------------------------------------
+  // tiny helpers
+  // ------------------------------------------------------------------
+  var $ = function (sel, root) { return (root || document).querySelector(sel); };
+  var $$ = function (sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); };
+
+  function esc(v) {
+    if (v === null || v === undefined) return "";
+    return String(v).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function money(v) {
+    var n = Number(v);
+    if (!isFinite(n)) return "--";
+    return (Math.round(n * 100) / 100).toLocaleString("en-AE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function when(iso) {
+    if (!iso) return "--";
+    var d = new Date(/Z$|[+-]\d\d:?\d\d$/.test(iso) ? iso : iso.replace(" ", "T") + "Z");
+    if (isNaN(d.getTime())) return String(iso);
+    var diff = Math.round((Date.now() - d.getTime()) / 1000);
+    if (diff >= 0 && diff < 60) return diff + "s ago";
+    if (diff >= 0 && diff < 3600) return Math.round(diff / 60) + "m ago";
+    if (diff >= 0 && diff < 86400) return Math.round(diff / 3600) + "h ago";
+    return d.toISOString().slice(0, 16).replace("T", " ");
+  }
+
+  var STATE_LABEL = {
+    RECEIVED: "Received", TRIAGED: "Triaged", CLEAR: "Clear",
+    PENDING_CONFIRMATION: "Pending confirmation", PENDING_GUARDIAN: "Pending guardian",
+    ESCALATED: "Escalated", CLEARED: "Cleared", CANCELLED: "Cancelled",
+    CONFIRMED_CANCELLABLE: "Confirmed, cancellable", RELEASED: "Released"
+  };
+  var STATE_CLASS = {
+    CLEAR: "c-lo st-clear", CLEARED: "c-lo st-cleared", ESCALATED: "c-hi st-escalated",
+    PENDING_CONFIRMATION: "c-md st-pending_confirmation", PENDING_GUARDIAN: "c-md st-pending_confirmation",
+    RECEIVED: "c-bl st-received", TRIAGED: "c-bl st-triaged", CANCELLED: "c-nu st-cancelled",
+    CONFIRMED_CANCELLABLE: "c-md st-pending_confirmation", RELEASED: "c-lo st-cleared"
+  };
+  function stateChip(state) {
+    return '<span class="chip ' + (STATE_CLASS[state] || "c-nu") + '">' + esc(STATE_LABEL[state] || state || "Unknown") + "</span>";
+  }
+
+  function verdictChip(t) {
+    var d = (t.decision || "").toUpperCase();
+    var map = {
+      CLEAR: "c-lo", CLEARED: "c-lo", APPROVE: "c-lo", CONFIRMED: "c-lo",
+      ESCALATE: "c-hi", ESCALATED: "c-hi", BLOCK: "c-hi", CANCEL: "c-hi", CANCELLED: "c-nu",
+      HOLD: "c-md", PENDING: "c-md", REVIEW: "c-md"
+    };
+    var label = t.decision || "Unscored";
+    var cls = map[d] || "c-nu";
+    if (!t.decision) { label = "Not yet decided"; cls = "c-nu"; }
+    return '<span class="chip ' + cls + '">' + esc(String(label).toUpperCase() === String(label) ? label : label) + "</span>";
+  }
+
+  function riskClass(score) {
+    if (score === null || score === undefined) return "c-nu";
+    var n = Number(score);
+    if (n >= 70) return "c-hi";
+    if (n >= 35) return "c-md";
+    return "c-lo";
+  }
+
+  // fetch wrapper: always JSON, raises a plain message on any failure
+  function api(method, path, body) {
+    var opts = { method: method, headers: { "Accept": "application/json" }, cache: "no-store" };
+    if (body !== undefined) {
+      opts.headers["Content-Type"] = "application/json";
+      opts.body = JSON.stringify(body);
+    }
+    return fetch(path, opts).then(function (res) {
+      return res.text().then(function (text) {
+        var data = null;
+        try { data = text ? JSON.parse(text) : null; } catch (e) { data = null; }
+        if (!res.ok) {
+          var msg = (data && data.error) ? data.error : ("Request failed with status " + res.status);
+          throw new Error(msg);
+        }
+        if (data === null) throw new Error("The server returned an unreadable response.");
+        return data;
+      });
+    }, function () {
+      throw new Error("The API could not be reached. Check that the Venator server is running.");
+    });
+  }
+
+  function notice(el, tone, text) {
+    if (!el) return;
+    if (!text) { el.innerHTML = ""; return; }
+    el.innerHTML = '<p class="notice" data-tone="' + tone + '" role="status">' + esc(text) + "</p>";
+  }
+
+  function empty(text) {
+    return '<p class="empty">' + esc(text) + "</p>";
+  }
+
+  // ------------------------------------------------------------------
+  // navigation: pages, groups, home
+  // ------------------------------------------------------------------
+  var PAGES = {
+    overview: { el: "page-overview", group: "operations", crumb: "Operations / Overview" },
+    queue: { el: "page-queue", group: "operations", crumb: "Operations / Queue" },
+    runs: { el: "page-runs", group: "operations", crumb: "Operations / Agent runs" },
+    escalations: { el: "page-escalations", group: "operations", crumb: "Operations / Escalations" },
+    policy: { el: "page-policy", group: "governance", crumb: "Governance / Policy" },
+    admin: { el: "page-admin", group: "governance", crumb: "Governance / Admin agent" }
+  };
+  var currentPage = null;
+
+  function show(page) {
+    if (page && !PAGES[page]) page = null;
+    currentPage = page;
+
+    // home vs page
+    var home = $("#pageHome");
+    if (page) {
+      home.hidden = true;
+      Object.keys(PAGES).forEach(function (k) {
+        $("#" + PAGES[k].el).hidden = (k !== page);
+      });
+    } else {
+      home.hidden = false;
+      Object.keys(PAGES).forEach(function (k) { $("#" + PAGES[k].el).hidden = true; });
+    }
+
+    // sidebar selection
+    $$(".nav").forEach(function (btn) {
+      if (btn.getAttribute("data-page") === page) btn.setAttribute("aria-current", "page");
+      else btn.removeAttribute("aria-current");
+    });
+
+    // make sure the active page's group is open
+    if (page) expandGroup(PAGES[page].group, true);
+
+    if (window.location.hash !== "#" + (page || "home")) {
+      history.replaceState(null, "", page ? "#" + page : "#home");
+    }
+    if (page) window.scrollTo(0, 0);
+    load(page);
+  }
+
+  function expandGroup(group, open) {
+    if (!group) return;
+    var btn = $('.gbtn[data-toggle="' + group + '"]');
+    var panel = $("#nav-" + group);
+    if (!btn || !panel) return;
+    btn.setAttribute("aria-expanded", open ? "true" : "false");
+    panel.style.display = open ? "" : "none";
+  }
+
+  $$(".gbtn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var open = btn.getAttribute("aria-expanded") === "true";
+      expandGroup(btn.getAttribute("data-toggle"), !open);
+    });
+  });
+
+  $$(".nav").forEach(function (btn) {
+    btn.addEventListener("click", function () { show(btn.getAttribute("data-page")); });
+  });
+
+  $("#brandHome").addEventListener("click", function () { show(null); });
+  $("#sideHome").addEventListener("click", function () { show(null); });
+
+  $("#ctaTriageNew").addEventListener("click", function () {
+    show("queue");
+    setPill("PENDING_CONFIRMATION");
+  });
+
+  window.addEventListener("hashchange", function () {
+    var h = window.location.hash.replace("#", "");
+    if (h === "home" || !h) show(null); else show(h);
+  });
+
+  // ------------------------------------------------------------------
+  // shared state
+  // ------------------------------------------------------------------
+  var state = {
+    transactions: [],
+    stats: {},
+    health: null,
+    policy: null,
+    runTxn: null,
+    queueFilter: "ALL",
+    queueQuery: "",
+    loaded: {}
+  };
+  var HEALTH_CACHE = { at: 0, value: null };
+
+  function health(force) {
+    if (!force && HEALTH_CACHE.value && (Date.now() - HEALTH_CACHE.at) < 20000) {
+      return Promise.resolve(HEALTH_CACHE.value);
+    }
+    return api("GET", "/api/v1/health").then(function (d) {
+      HEALTH_CACHE.at = Date.now();
+      HEALTH_CACHE.value = d;
+      return d;
+    });
+  }
+
+  // ------------------------------------------------------------------
+  // KPI strip
+  // ------------------------------------------------------------------
+  function statKeys(stats) {
+    return {
+      received: stats.RECEIVED || 0,
+      held: (stats.PENDING_CONFIRMATION || 0) + (stats.PENDING_GUARDIAN || 0) + (stats.CONFIRMED_CANCELLABLE || 0),
+      escalated: stats.ESCALATED || 0,
+      cleared: (stats.CLEARED || 0) + (stats.RELEASED || 0),
+      cancelled: stats.CANCELLED || 0,
+      clear: stats.CLEAR || 0
+    };
+  }
+
+  function paintTopKpi(stats) {
+    var s = statKeys(stats);
+    $("#kpiReceived").textContent = s.received;
+    $("#kpiHeld").textContent = s.held;
+    $("#kpiEscalated").textContent = s.escalated;
+    $("#kpiCleared").textContent = s.cleared;
+  }
+
+  function paintStrip(el, stats) {
+    if (!el) return;
+    var s = statKeys(stats);
+    var cells = [
+      { i: "Received", b: s.received, s: "Awaiting first triage" },
+      { i: "Held for a human", b: s.held, s: "Confirmation or guardian" },
+      { i: "Escalated", b: s.escalated, s: "Staff review required", c: "bad" },
+      { i: "Cleared", b: s.cleared, s: "Released to the recipient", c: "ok" },
+      { i: "Cancelled", b: s.cancelled, s: "Stopped before settlement" },
+      { i: "Clear, no action", b: s.clear, s: "Low risk, auto-passed", c: "ok" }
+    ];
+    el.innerHTML = cells.map(function (c) {
+      return '<div class="cell' + (c.c ? " " + c.c : "") + '">' +
+        "<i>" + esc(c.i) + "</i><b>" + esc(c.b) + "</b><s>" + esc(c.s) + "</s></div>";
+    }).join("");
+  }
+
+  // ------------------------------------------------------------------
+  // sidebar health pip
+  // ------------------------------------------------------------------
+  function paintHealth(h) {
+    state.health = h;
+    var ok = h && h.status === "ok";
+    $("#healthPip").className = "pip" + (ok ? "" : " bad");
+    $("#healthText").textContent = ok ? "API healthy" : "API unavailable";
+    $("#healthSub").textContent = (h && h.policy_version !== undefined)
+      ? ("Policy v" + h.policy_version + " \u00b7 " + (h.active_curveballs || []).length + " rules live")
+      : "No policy version reported.";
+    $("#footPolicy").textContent = (h && h.policy_version !== undefined) ? ("Policy v" + h.policy_version) : "Policy v\u2013";
+    $("#pVersion").textContent = (h && h.policy_version !== undefined) ? ("Policy v" + h.policy_version) : "Policy v\u2013";
+    $("#whoRole").textContent = ok ? "Signed in \u00b7 reviewer" : "Signed in \u00b7 offline";
+  }
+
+  function refreshHealth(quiet) {
+    return health(true).then(paintHealth, function (err) {
+      if (!quiet) {
+        $("#healthPip").className = "pip bad";
+        $("#healthText").textContent = "API unavailable";
+        $("#healthSub").textContent = err.message;
+      } else {
+        state.health = null;
+      }
+    });
+  }
+
+  // ------------------------------------------------------------------
+  // transactions loader (shared by overview, queue, escalations)
+  // ------------------------------------------------------------------
+  function fetchTransactions() {
+    return api("GET", "/api/v1/transactions?state=ALL").then(function (d) {
+      state.transactions = (d.transactions || []).slice();
+      state.stats = d.stats || {};
+      paintTopKpi(state.stats);
+      $("#footCount").textContent = state.transactions.length + " transactions in view";
+      return state.transactions;
+    });
+  }
+
+  function byState() {
+    var out = {};
+    state.transactions.forEach(function (t) {
+      (out[t.state] = out[t.state] || []).push(t);
+    });
+    return out;
+  }
+
+  // ==================================================================
+  // OVERVIEW
+  // ==================================================================
+  function loadOverview() {
+    notice($("#ovNotice"), "info", "");
+    var tasks = [
+      fetchTransactions(),
+      api("GET", "/api/v1/broadcasts").catch(function () { return { broadcasts: [] }; }),
+      health(false).catch(function () { return null; })
+    ];
+    return Promise.all(tasks).then(function (res) {
+      var txns = res[0], bc = res[1], h = res[2];
+      if (h) paintHealth(h);
+      paintStrip($("#ovStrip"), state.stats);
+      paintQueue(state.stats);
+      paintRecent(txns);
+      paintBroadcasts(bc.broadcasts || []);
+      paintHealthPanel(h);
+      $("#ovUpdated").textContent = "Updated " + when(new Date().toISOString());
+    }, function (err) {
+      notice($("#ovNotice"), "bad", err.message);
+      paintStrip($("#ovStrip"), {});
+      $("#ovQueue").innerHTML = empty("Queue pressure is unavailable while the API is not answering.");
+      $("#ovRecent").innerHTML = '<tr><td colspan="5">' + esc("No transactions available.") + "</td></tr>";
+      $("#ovBroadcasts").innerHTML = empty("No alerts available.");
+    });
+  }
+
+  function paintQueue(stats) {
+    var groups = [
+      { label: "Pending confirmation", key: "PENDING_CONFIRMATION", cap: 8, tone: "amber" },
+      { label: "Pending guardian", key: "PENDING_GUARDIAN", cap: 8, tone: "amber" },
+      { label: "Escalated", key: "ESCALATED", cap: 12, tone: "amber" },
+      { label: "Received", key: "RECEIVED", cap: 16, tone: "" },
+      { label: "Triaged", key: "TRIAGED", cap: 16, tone: "" }
+    ];
+    var max = 1;
+    groups.forEach(function (g) { max = Math.max(max, stats[g.key] || 0); });
+    var total = groups.reduce(function (a, g) { return a + (stats[g.key] || 0); }, 0);
+    $("#ovQueueCount").textContent = total + " in the queue";
+
+    var rows = groups.map(function (g) {
+      var v = stats[g.key] || 0;
+      var pct = Math.round((v / max) * 100);
+      return '<div class="press">' +
+        '<div><div class="rt">' + esc(g.label) + "</div>" +
+        '<div class="barmeta">' + esc(g.key) + "</div></div>" +
+        '<div class="meter tall' + (g.tone ? " " + g.tone : "") + '" role="img" aria-label="' + esc(g.label + ": " + v + " of " + max) + '"><i style="width:' + pct + '%"></i></div>' +
+        '<div class="amt" style="text-align:right">' + esc(v) + "</div>" +
+        "</div>";
+    }).join("");
+    $("#ovQueue").innerHTML = rows;
+  }
+
+  function paintRecent(txns) {
+    var body = $("#ovRecent");
+    var recent = txns.slice().sort(function (a, b) {
+      return String(b.txn_id).localeCompare(String(a.txn_id));
+    }).slice(0, 12);
+    if (!recent.length) { body.innerHTML = '<tr><td colspan="5">' + esc("No transactions have been received yet.") + "</td></tr>"; return; }
+    body.innerHTML = recent.map(function (t) {
+      return "<tr>" +
+        '<td><a class="idlink" href="#runs" data-open="' + esc(t.txn_id) + '">' + esc(t.txn_id) + "</a></td>" +
+        "<td>" + esc(t.student) + "</td>" +
+        "<td>" + esc(t.recipient_id) + "</td>" +
+        '<td class="num">' + esc(money(t.amount_aed)) + "</td>" +
+        "<td>" + stateChip(t.state) + "</td>" +
+        "</tr>";
+    }).join("");
+  }
+
+  function paintBroadcasts(list) {
+    var el = $("#ovBroadcasts");
+    if (!list.length) { el.innerHTML = empty("No scam alerts have been broadcast."); return; }
+    el.innerHTML = list.slice(0, 6).map(function (b) {
+      return '<div class="row"><div class="rmain">' +
+        '<div class="rs">' + esc(b.message) + "</div></div>" +
+        '<div class="rmeta">' + esc(when(b.created_at)) + "</div></div>";
+    }).join("");
+  }
+
+  function paintHealthPanel(h) {
+    var el = $("#ovHealth");
+    if (!h) { el.innerHTML = "<dt>Status</dt><dd>Unavailable</dd>"; return; }
+    var rows = [
+      ["Status", h.status || "unknown"],
+      ["Policy version", h.policy_version !== undefined ? h.policy_version : "\u2013"],
+      ["Policy file", h.policy_path || "\u2013"],
+      ["Rules active", (h.active_curveballs || []).length + " of " + (h.rules || []).length],
+      ["Database", h.database || "\u2013"],
+      ["Server time", when(h.time)]
+    ];
+    el.innerHTML = rows.map(function (r) {
+      return "<dt>" + esc(r[0]) + "</dt><dd>" + esc(r[1]) + "</dd>";
+    }).join("");
+  }
+
+  $("#ovRefresh").addEventListener("click", function () {
+    this.disabled = true;
+    loadOverview().then(function () { $("#ovRefresh").disabled = false; },
+      function () { $("#ovRefresh").disabled = false; });
+  });
+
+  // ==================================================================
+  // QUEUE
+  // ==================================================================
+  function setPill(stateName) {
+    state.queueFilter = stateName;
+    $$("#qPills .pill").forEach(function (p) {
+      p.setAttribute("aria-pressed", p.getAttribute("data-state") === stateName ? "true" : "false");
+    });
+  }
+
+  function loadQueue() {
+    $("#qNotice").innerHTML = "";
+    var url = "/api/v1/transactions?state=" + encodeURIComponent(state.queueFilter || "ALL");
+    if (state.queueQuery) url += "&q=" + encodeURIComponent(state.queueQuery);
+    return api("GET", url).then(function (d) {
+      var rows = d.transactions || [];
+      state.stats = d.stats || state.stats;
+      paintTopKpi(state.stats);
+      paintQueueTable(rows);
+    }, function (err) {
+      notice($("#qNotice"), "bad", err.message);
+      $("#qRows").innerHTML = '<tr><td colspan="7">' + esc("The queue could not be loaded.") + "</td></tr>";
+      $("#qCount").textContent = "";
+    });
+  }
+
+  function paintQueueTable(rows) {
+    var body = $("#qRows");
+    $("#qCount").textContent = rows.length + " of " + state.transactions.length + " shown";
+    if (!rows.length) {
+      body.innerHTML = '<tr><td colspan="7">' + esc("No transactions match this filter.") + "</td></tr>";
+      return;
+    }
+    body.innerHTML = rows.map(function (t) {
+      var risk = t.risk_score === null || t.risk_score === undefined ? "\u2013" : t.risk_score;
+      return "<tr>" +
+        '<td><a class="idlink" href="#runs" data-open="' + esc(t.txn_id) + '">' + esc(t.txn_id) + "</a></td>" +
+        "<td>" + esc(t.student) + "</td>" +
+        '<td class="num">' + esc(t.student_age === null || t.student_age === undefined ? "\u2013" : t.student_age) + "</td>" +
+        "<td>" + esc(t.recipient_id) + "</td>" +
+        '<td class="num">' + esc(money(t.amount_aed)) + "</td>" +
+        "<td>" + stateChip(t.state) + "</td>" +
+        '<td><span class="chip ' + riskClass(t.risk_score) + '">' + esc(risk) + "</span> " + verdictChip(t) + "</td>" +
+        "</tr>";
+    }).join("");
+  }
+
+  $$("#qPills .pill").forEach(function (p) {
+    p.addEventListener("click", function () {
+      setPill(p.getAttribute("data-state"));
+      loadQueue();
+    });
+  });
+  $("#qSearchGo").addEventListener("click", function () {
+    state.queueQuery = $("#qSearch").value.trim();
+    loadQueue();
+  });
+  $("#qSearch").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") { e.preventDefault(); state.queueQuery = this.value.trim(); loadQueue(); }
+  });
+  $("#qRefresh").addEventListener("click", function () {
+    var b = this; b.disabled = true;
+    fetchTransactions().then(function () { return loadQueue(); })
+      .then(function () { b.disabled = false; }, function () { b.disabled = false; });
+  });
+
+  // ==================================================================
+  // AGENT RUNS
+  // ==================================================================
+  function loadRuns(preselect) {
+    $("#rNotice").innerHTML = "";
+    var jobs = [health(false).catch(function () { return null; })];
+    if (!state.transactions.length) {
+      jobs.push(fetchTransactions().catch(function () { return []; }));
+    } else {
+      jobs.push(Promise.resolve(state.transactions));
+    }
+    return Promise.all(jobs).then(function (res) {
+      var txns = res[1] || state.transactions;
+      var sel = $("#rCaseSelect");
+      sel.innerHTML = txns.map(function (t) {
+        return '<option value="' + esc(t.txn_id) + '">' + esc(t.txn_id + " \u00b7 " + t.student + " \u00b7 " + money(t.amount_aed) + " AED") + "</option>";
+      }).join("");
+      var pick = preselect || state.runTxn || (txns[0] && txns[0].txn_id);
+      if (pick) { sel.value = pick; return openCase(pick); }
+      $("#rTrail").innerHTML = empty("There are no transactions to inspect yet.");
+      $("#rCase").innerHTML = "";
+      $("#rCaseMeta").textContent = "";
+      return null;
+    }, function (err) {
+      notice($("#rNotice"), "bad", err.message);
+    });
+  }
+
+  function openCase(tid) {
+    if (!tid) return Promise.resolve();
+    state.runTxn = tid;
+    $("#rCaseMeta").textContent = "Loading " + tid + "\u2026";
+    return api("GET", "/api/v1/transactions/" + encodeURIComponent(tid)).then(function (d) {
+      paintCase(d.txn, d.trail || [], d.cancel_window_seconds_remaining);
+      $("#rCaseSelect").value = tid;
+    }, function (err) {
+      notice($("#rNotice"), "bad", err.message);
+      $("#rCaseMeta").textContent = "";
+    });
+  }
+
+  function paintCase(txn, trail, remaining) {
+    var sel = $("#rCaseSelect");
+    if (txn && sel && sel.value !== txn.txn_id) {
+      if (!$$("option", sel).some(function (o) { return o.value === txn.txn_id; })) {
+        var o = document.createElement("option");
+        o.value = txn.txn_id; o.textContent = txn.txn_id + " \u00b7 " + txn.student;
+        sel.appendChild(o);
+      }
+      sel.value = txn.txn_id;
+    }
+    $("#rCaseMeta").textContent = txn ? (trail.length + " steps \u00b7 " + (STATE_LABEL[txn.state] || txn.state)) : "";
+
+    // case panel
+    var kv = $("#rCase");
+    if (txn) {
+      var fields = [
+        ["Transaction", txn.txn_id],
+        ["Student", txn.student + (txn.student_age !== null && txn.student_age !== undefined ? " (age " + txn.student_age + ")" : "")],
+        ["Recipient", txn.recipient_id],
+        ["Amount", money(txn.amount_aed) + " AED"],
+        ["Purpose", txn.purpose || "\u2013"],
+        ["State", STATE_LABEL[txn.state] || txn.state],
+        ["Risk score", txn.risk_score === null || txn.risk_score === undefined ? "\u2013" : txn.risk_score],
+        ["Confidence", txn.confidence === null || txn.confidence === undefined ? "\u2013" : Math.round(Number(txn.confidence) * 100) / 100],
+        ["Created", when(txn.created_at)]
+      ];
+      if (remaining !== undefined && remaining !== null) fields.push(["Cancel window", remaining + "s remaining"]);
+      kv.innerHTML = fields.map(function (f) {
+        return "<dt>" + esc(f[0]) + "</dt><dd>" + esc(f[1]) + "</dd>";
+      }).join("");
+    } else {
+      kv.innerHTML = empty("No case selected.");
+    }
+
+    // findings
+    $("#rFindRisk").textContent = txn && txn.risk_score !== null && txn.risk_score !== undefined
+      ? (txn.risk_score + " of 100 on the composite risk read.")
+      : "No risk score recorded for this case.";
+    $("#rFindRiskCf").innerHTML = txn ? '<span class="chip ' + riskClass(txn.risk_score) + '">' + esc(txn.risk_score === null || txn.risk_score === undefined ? "\u2013" : txn.risk_score) + "</span>" : "";
+    $("#rFindConf").textContent = txn && txn.confidence !== null && txn.confidence !== undefined
+      ? "The chain's confidence in its own decision."
+      : "No confidence recorded.";
+    $("#rFindConfV").textContent = txn && txn.confidence !== null && txn.confidence !== undefined
+      ? Math.round(Number(txn.confidence) * 100) + "%" : "";
+    $("#rFindDec").textContent = txn && txn.decision
+      ? (txn.decision + " \u2014 recorded by the decision chain.") : "The case has not been decided.";
+    $("#rExplanation").textContent = (txn && txn.explanation) ? txn.explanation : "No explanation recorded for this case.";
+
+    // trail
+    $("#rTrailCount").textContent = trail.length + " entries";
+    var tl = $("#rTrail");
+    if (!trail.length) { tl.innerHTML = empty("This transaction has no decision-chain entries yet. Run triage to produce them."); }
+    else {
+      tl.innerHTML = trail.map(function (e) {
+        var actor = String(e.actor || "system").toLowerCase();
+        return '<div class="tlrow">' +
+          '<span class="dot a-' + esc(actor) + '" aria-hidden="true"></span>' +
+          '<span class="actor tx-' + esc(actor) + '">' + esc(actor) + "</span>" +
+          '<span><span class="stp">' + esc(e.step || "") + "</span>" +
+          '<span class="det" style="display:block">' + esc(e.detail || "") + "</span>" +
+          '<span class="quiet" style="display:block;font-size:12px;margin-top:2px">' + esc(when(e.created_at)) + "</span></span>" +
+          "</div>";
+      }).join("");
+    }
+  }
+
+  $("#rCaseSelect").addEventListener("change", function () { openCase(this.value); });
+  $("#rRefresh").addEventListener("click", function () {
+    var b = this; b.disabled = true;
+    openCase(state.runTxn).then(function () { b.disabled = false; }, function () { b.disabled = false; });
+  });
+  $("#rTriage").addEventListener("click", function () {
+    var b = this;
+    if (!state.runTxn) { notice($("#rNotice"), "warn", "Select a transaction before running the triage chain."); return; }
+    b.disabled = true;
+    notice($("#rNotice"), "info", "Running the decision chain on " + state.runTxn + "\u2026");
+    api("POST", "/api/v1/transactions/" + encodeURIComponent(state.runTxn) + "/triage", {})
+      .then(function (d) {
+        notice($("#rNotice"), "ok", "Triage complete: " + (d.action || "done") + (d.rule ? " via " + d.rule : "") + ".");
+        return openCase(state.runTxn);
+      })
+      .then(function () { return fetchTransactions(); })
+      .then(function () { b.disabled = false; }, function (err) {
+        notice($("#rNotice"), "bad", err.message);
+        b.disabled = false;
+      });
+  });
+
+  // ==================================================================
+  // ESCALATIONS
+  // ==================================================================
+  function loadEscalations() {
+    $("#eNotice").innerHTML = "";
+    return api("GET", "/api/v1/transactions?state=ALL").then(function (d) {
+      var txns = d.transactions || [];
+      state.transactions = txns;
+      state.stats = d.stats || {};
+      paintTopKpi(state.stats);
+      paintStrip($("#eStrip"), state.stats);
+      var conf = txns.filter(function (t) { return t.state === "PENDING_CONFIRMATION"; });
+      var guard = txns.filter(function (t) { return t.state === "PENDING_GUARDIAN"; });
+      var staff = txns.filter(function (t) { return t.state === "ESCALATED" || t.state === "CONFIRMED_CANCELLABLE"; });
+      $("#eCountConf").textContent = conf.length;
+      $("#eCountGuard").textContent = guard.length;
+      $("#eCountStaff").textContent = staff.length;
+      paintEscColumn($("#eStudent"), conf, "student");
+      paintEscColumn($("#eGuardian"), guard, "guardian");
+      paintEscColumn($("#eStaff"), staff, "staff");
+      $("#eUpdated").textContent = "Updated " + when(new Date().toISOString());
+    }, function (err) {
+      notice($("#eNotice"), "bad", err.message);
+      $("#eStudent").innerHTML = empty("Escalations could not be loaded.");
+      $("#eGuardian").innerHTML = "";
+      $("#eStaff").innerHTML = "";
+      paintStrip($("#eStrip"), {});
+    });
+  }
+
+  function paintEscColumn(el, items, kind) {
+    if (!items.length) {
+      var quiet = {
+        student: "No payment is waiting on a student to confirm it.",
+        guardian: "No payment is waiting on a guardian.",
+        staff: "Nothing needs a staff review right now."
+      };
+      el.innerHTML = empty(quiet[kind]);
+      return;
+    }
+    el.innerHTML = items.map(function (t) {
+      return '<div class="row"><div class="rmain">' +
+        '<div class="rt"><a class="idlink" href="#runs" data-open="' + esc(t.txn_id) + '">' + esc(t.txn_id) + "</a> " +
+        stateChip(t.state) + "</div>" +
+        '<div class="rs">' + esc(t.student) +
+        (t.student_age !== null && t.student_age !== undefined ? " (age " + esc(t.student_age) + ")" : "") +
+        " to " + esc(t.recipient_id) + " for " + esc(t.purpose || "a transfer") + "</div>" +
+        '<div class="actions">' + escActions(t, kind) + "</div>" +
+        "</div>" +
+        '<div class="rmeta"><span class="amt">' + esc(money(t.amount_aed)) + " AED</span><br>" +
+        '<span class="chip ' + riskClass(t.risk_score) + '">risk ' + esc(t.risk_score === null || t.risk_score === undefined ? "\u2013" : t.risk_score) + "</span></div>" +
+        "</div>";
+    }).join("");
+  }
+
+  function escActions(t, kind) {
+    var id = esc(t.txn_id);
+    if (kind === "student") {
+      return '<button class="btn sm go" data-act="resolve" data-id="' + id + '" data-choice="confirm">Confirm payment</button>' +
+             '<button class="btn sm danger" data-act="resolve" data-id="' + id + '" data-choice="cancel">Cancel payment</button>';
+    }
+    if (kind === "guardian") {
+      return '<button class="btn sm teal" data-act="guardian" data-id="' + id + '" data-decision="approve">Approve as guardian</button>' +
+             '<button class="btn sm danger" data-act="guardian" data-id="' + id + '" data-decision="decline">Decline as guardian</button>';
+    }
+    if (t.state === "CONFIRMED_CANCELLABLE") {
+      return '<button class="btn sm go" data-act="cancel-window" data-id="' + id + '" data-window="confirm">Confirm cancellation</button>' +
+             '<button class="btn sm" data-act="cancel-window" data-id="' + id + '" data-window="cancel">Take it back</button>' +
+             '<button class="btn sm" data-act="cancel-window" data-id="' + id + '" data-window="release">Release to recipient</button>';
+    }
+    return '<button class="btn sm go" data-act="resolve" data-id="' + id + '" data-choice="cancel">Cancel payment</button>' +
+           '<button class="btn sm" data-act="resolve" data-id="' + id + '" data-choice="confirm">Release payment</button>';
+  }
+
+  $("#eRefresh").addEventListener("click", function () {
+    var b = this; b.disabled = true;
+    loadEscalations().then(function () { b.disabled = false; }, function () { b.disabled = false; });
+  });
+
+  // one delegated handler for every escalation action
+  $("#page-escalations").addEventListener("click", function (ev) {
+    var btn = ev.target.closest("[data-act]");
+    if (!btn) return;
+    var act = btn.getAttribute("data-act");
+    var id = btn.getAttribute("data-id");
+    var url, body, label;
+    if (act === "resolve") {
+      url = "/api/v1/transactions/" + encodeURIComponent(id) + "/resolve";
+      body = { choice: btn.getAttribute("data-choice") };
+      label = body.choice === "confirm" ? "confirming the payment" : "cancelling the payment";
+    } else if (act === "guardian") {
+      url = "/api/v1/transactions/" + encodeURIComponent(id) + "/guardian";
+      body = { decision: btn.getAttribute("data-decision") };
+      label = body.decision === "approve" ? "recording guardian approval" : "recording guardian decline";
+    } else if (act === "cancel-window") {
+      url = "/api/v1/transactions/" + encodeURIComponent(id) + "/cancel-window";
+      body = { action: btn.getAttribute("data-window") };
+      label = "handling the cancel window";
+    } else { return; }
+
+    btn.disabled = true;
+    notice($("#eNotice"), "info", "Working on " + id + ": " + label + "\u2026");
+    api("POST", url, body).then(function (d) {
+      var final = d.final || d.state || d.action || "done";
+      notice($("#eNotice"), "ok", id + " is now " + final + ".");
+      return loadEscalations();
+    }).then(function () {
+      return health(true).then(paintHealth, function () {});
+    }).catch(function (err) {
+      notice($("#eNotice"), "bad", err.message);
+      btn.disabled = false;
+    });
+  });
+
+  // ==================================================================
+  // POLICY
+  // ==================================================================
+  function loadPolicy() {
+    $("#pNotice").innerHTML = "";
+    return api("GET", "/api/v1/policy").then(function (d) {
+      state.policy = d;
+      $("#pVersion").textContent = "Policy v" + (d.version !== undefined ? d.version : "\u2013");
+      $("#footPolicy").textContent = "Policy v" + (d.version !== undefined ? d.version : "\u2013");
+      paintThresholds(d.thresholds || []);
+      paintRules(d.rule_order || [], d.raw || {});
+      buildKeySelect(d.thresholds || []);
+      return loadPolicyActivity();
+    }, function (err) {
+      notice($("#pNotice"), "bad", err.message);
+      $("#pThresholds").innerHTML = '<tr><td colspan="3">' + esc("The policy could not be loaded.") + "</td></tr>";
+      $("#pRules").innerHTML = empty("Rule order unavailable.");
+    });
+  }
+
+  function valueType(v) {
+    if (typeof v === "boolean") return "boolean";
+    if (typeof v === "number") return Number.isInteger(v) ? "integer" : "decimal";
+    if (Array.isArray(v)) return "list";
+    return typeof v;
+  }
+
+  function paintThresholds(rows) {
+    var body = $("#pThresholds");
+    if (!rows.length) { body.innerHTML = '<tr><td colspan="3">' + esc("No thresholds are exposed.") + "</td></tr>"; return; }
+    body.innerHTML = rows.map(function (r) {
+      return "<tr>" +
+        '<td class="mono-sm">' + esc(r.key) + "</td>" +
+        '<td class="num">' + esc(typeof r.value === "number" ? r.value : String(r.value)) + "</td>" +
+        '<td><span class="chip c-nu">' + esc(valueType(r.value)) + "</span></td>" +
+        "</tr>";
+    }).join("");
+  }
+
+  function paintRules(order, raw) {
+    $("#pRuleCount").textContent = order.length + " rules, in execution order";
+    var el = $("#pRules");
+    if (!order.length) { el.innerHTML = empty("No rules are listed in the policy file."); return; }
+    el.innerHTML = order.map(function (name, i) {
+      var enabled = ruleEnabled(name, raw);
+      var section = { split_payment: "split_payment", lookalike_vendor: "lookalike", injection_attempt: "injection", guardian_required: "guardian" }[name];
+      var detail = section
+        ? (enabled ? "Active: reads its " + section + " section from policy." : "Disabled through its " + section + " switch.")
+        : "Active: a core rule, always evaluated.";
+      return '<div class="tlrow" style="grid-template-columns:20px 74px minmax(0,1fr)">' +
+        '<span class="dot a-' + (enabled ? "human" : "system") + '" aria-hidden="true"></span>' +
+        '<span class="actor tx-' + (enabled ? "human" : "system") + '">' + esc(enabled ? "active" : "off") + "</span>" +
+        '<span><span class="stp">' + esc((i + 1) + ". " + name) + "</span>" +
+        '<span class="det" style="display:block">' + esc(detail) + "</span></span>" +
+        "</div>";
+    }).join("");
+  }
+
+  function ruleEnabled(name, raw) {
+    var map = { split_payment: "split_payment", lookalike_vendor: "lookalike", injection_attempt: "injection", guardian_required: "guardian" };
+    var sec = map[name];
+    if (!sec) return true;
+    var node = raw[sec];
+    return !node || node.enabled !== false;
+  }
+
+  function buildKeySelect(rows) {
+    var sel = $("#pKey");
+    if (!sel) return;
+    var prev = sel.value;
+    sel.innerHTML = rows.map(function (r) {
+      var kind = valueType(r.value);
+      var editable = (kind === "integer" || kind === "decimal" || kind === "boolean");
+      return '<option value="' + esc(r.key) + '"' + (editable ? "" : " disabled") + ">" +
+        esc(r.key + (editable ? "" : "  (read-only " + kind + ")")) + "</option>";
+    }).join("");
+    if (prev) sel.value = prev;
+    syncValueField();
+  }
+
+  function syncValueField() {
+    var sel = $("#pKey"), field = $("#pValue");
+    if (!sel || !field || !state.policy) return;
+    var key = sel.value;
+    var row = (state.policy.thresholds || []).filter(function (r) { return r.key === key; })[0];
+    if (row) {
+      field.value = typeof row.value === "number" ? row.value : String(row.value);
+      field.placeholder = String(row.value);
+    }
+  }
+  $("#pKey").addEventListener("change", syncValueField);
+
+  $("#pForm").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var key = $("#pKey").value;
+    var raw = $("#pValue").value.trim();
+    var actor = $("#pActor").value.trim() || "admin";
+    if (!key) { notice($("#pFormNotice"), "warn", "Choose a threshold to change."); return; }
+    if (raw === "") { notice($("#pFormNotice"), "warn", "Enter a new value before applying the change."); return; }
+    var value = raw;
+    if (/^-?\d+(\.\d+)?$/.test(raw)) value = Number(raw);
+    else if (raw === "true" || raw === "false") value = (raw === "true");
+
+    var btn = $("#pSubmit");
+    btn.disabled = true;
+    notice($("#pFormNotice"), "info", "Applying " + key + "\u2026");
+    api("PATCH", "/api/v1/policy", { key: key, value: value, actor: actor }).then(function (d) {
+      notice($("#pFormNotice"), "ok", actor + " set " + d.changed + ": " + d.from + " \u2192 " + d.to + " (policy v" + d.policy_version + ").");
+      return loadPolicy();
+    }).then(function () {
+      return health(true).then(paintHealth, function () {});
+    }).then(function () { btn.disabled = false; }, function (err) {
+      notice($("#pFormNotice"), "bad", err.message);
+      btn.disabled = false;
+    });
+  });
+
+  function loadPolicyActivity() {
+    return api("GET", "/api/v1/audit?limit=40").then(function (d) {
+      var rows = (d.entries || []).filter(function (e) { return e.txn_id === "POLICY"; }).slice(0, 8);
+      var el = $("#pActivity");
+      if (!rows.length) { el.innerHTML = empty("No policy changes have been recorded."); return; }
+      el.innerHTML = rows.map(function (e) {
+        return '<div class="row"><div class="rmain">' +
+          '<div class="rt">' + esc(e.step || "policy change") + "</div>" +
+          '<div class="rs">' + esc(e.detail || "") + "</div></div>" +
+          '<div class="rmeta">' + esc(when(e.created_at)) + "</div></div>";
+      }).join("");
+    }, function () {});
+  }
+
+  $("#pRefresh").addEventListener("click", function () {
+    var b = this; b.disabled = true;
+    loadPolicy().then(function () { b.disabled = false; }, function () { b.disabled = false; });
+  });
+
+  // ==================================================================
+  // ADMIN AGENT
+  // ==================================================================
+  var SUGGESTIONS = [
+    "What are the current amounts?",
+    "Which rules are active and in what order?",
+    "What is currently held?",
+    "How does guardian approval work?",
+    "How are split payments detected?",
+    "What is the system health?"
+  ];
+  var chatStarted = false;
+
+  function buildSuggestions() {
+    var el = $("#aSuggest");
+    el.innerHTML = SUGGESTIONS.map(function (q) {
+      return '<button class="pill" type="button" data-ask="' + esc(q) + '">' + esc(q) + "</button>";
+    }).join("");
+  }
+
+  function bubble(role, who, text) {
+    return '<div class="bubble ' + (role === "me" ? "me" : "bot") + '">' +
+      '<span class="who">' + esc(who) + "</span>" + esc(text) + "</div>";
+  }
+
+  function loadAdmin() {
+    $("#aNotice").innerHTML = "";
+    if (!chatStarted) {
+      $("#aLog").innerHTML = bubble("bot", "Admin agent",
+        "Ask about thresholds, the active policy, the rule order, current holds, guardian approval, split payments, lookalike detection, message handling or system health. Answers come from live policy and queue state.");
+      chatStarted = true;
+    }
+    return api("GET", "/api/v1/admin/agent").then(function (d) {
+      paintBriefing(d.briefing || d);
+      $("#aBriefed").textContent = "Briefing generated " + when((d.briefing && d.briefing.generated) || new Date().toISOString());
+    }, function (err) {
+      notice($("#aNotice"), "bad", err.message);
+    });
+  }
+
+  function paintBriefing(b) {
+    if (!b) return;
+    var el = $("#aBrief");
+    var q = b.queue || {};
+    var rows = [
+      ["Generated", when(b.generated)],
+      ["Policy version", b.policy_version !== undefined ? b.policy_version : "\u2013"],
+      ["Rules active", (b.enabled_rules || []).length + " of " + (b.rule_count || 0)],
+      ["Disabled rules", (b.disabled_rules || []).length ? (b.disabled_rules || []).join(", ") : "None"],
+      ["Awaiting a human", b.awaiting_a_human !== undefined ? b.awaiting_a_human : "\u2013"],
+      ["Queue total", Object.keys(q).reduce(function (a, k) { return a + q[k]; }, 0)]
+    ];
+    el.innerHTML = rows.map(function (r) {
+      return "<dt>" + esc(r[0]) + "</dt><dd>" + esc(r[1]) + "</dd>";
+    }).join("");
+
+    var awaitEl = $("#aAwaiting");
+    var detail = b.awaiting_detail || [];
+    if (!detail.length) { awaitEl.innerHTML = empty("Nothing is waiting on a human decision."); return; }
+    awaitEl.innerHTML = detail.slice(0, 10).map(function (r) {
+      return '<div class="row"><div class="rmain">' +
+        '<div class="rt"><a class="idlink" href="#runs" data-open="' + esc(r.txn_id) + '">' + esc(r.txn_id) + "</a> " +
+        stateChip(r.state) + "</div>" +
+        '<div class="rs">' + esc(r.student) + " to " + esc(r.recipient_id) + "</div></div>" +
+        '<div class="rmeta"><span class="amt">' + esc(money(r.amount_aed)) + " AED</span></div></div>";
+    }).join("");
+  }
+
+  function ask(question) {
+    if (!question) { notice($("#aNotice"), "warn", "Type a question before asking the agent."); return; }
+    $("#aLog").insertAdjacentHTML("beforeend", bubble("me", "Operations desk", question));
+    $("#aLog").scrollTop = $("#aLog").scrollHeight;
+    var btn = $("#aSend");
+    btn.disabled = true;
+    notice($("#aNotice"), "info", "Asking the admin agent\u2026");
+    api("POST", "/api/v1/admin/agent", { question: question }).then(function (d) {
+      notice($("#aNotice"), "info", "");
+      $("#aLog").insertAdjacentHTML("beforeend", bubble("bot", "Admin agent", d.answer || "No answer was returned."));
+      $("#aLog").scrollTop = $("#aLog").scrollHeight;
+      if (d.briefing) paintBriefing(d.briefing);
+      btn.disabled = false;
+    }, function (err) {
+      notice($("#aNotice"), "bad", err.message);
+      btn.disabled = false;
+    });
+  }
+
+  $("#aForm").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var q = $("#aInput").value.trim();
+    ask(q);
+    if (q) $("#aInput").value = "";
+  });
+  $("#aSuggest").addEventListener("click", function (ev) {
+    var b = ev.target.closest("[data-ask]");
+    if (b) ask(b.getAttribute("data-ask"));
+  });
+
+  // ------------------------------------------------------------------
+  // open-a-case links (from overview, escalations, admin)
+  // ------------------------------------------------------------------
+  document.addEventListener("click", function (ev) {
+    var link = ev.target.closest("[data-open]");
+    if (!link) return;
+    ev.preventDefault();
+    var tid = link.getAttribute("data-open");
+    show("runs");
+    openCase(tid);
+  });
+
+  // ------------------------------------------------------------------
+  // router / loader
+  // ------------------------------------------------------------------
+  function load(page) {
+    if (!page) return Promise.resolve();
+    if (page === "overview") return loadOverview();
+    if (page === "queue") return loadQueue();
+    if (page === "runs") return loadRuns();
+    if (page === "escalations") return loadEscalations();
+    if (page === "policy") return loadPolicy();
+    if (page === "admin") return loadAdmin();
+    return Promise.resolve();
+  }
+
+  // ------------------------------------------------------------------
+  // boot
+  // ------------------------------------------------------------------
+  function boot() {
+    buildSuggestions();
+    refreshHealth(true).then(function () {
+      // prime the top KPI strip and footer count from live stats
+      return fetchTransactions();
+    }).catch(function () { /* health() already reported it in the sidebar */ });
+
+    var h = window.location.hash.replace("#", "");
+    if (h && PAGES[h]) show(h);
+    else show(null);
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>

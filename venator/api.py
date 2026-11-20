@@ -30,7 +30,7 @@ import time
 from datetime import datetime, timezone
 
 from . import db, guard, policy, tools
-from .agent import PocketPayAgent
+from .agent import VenatorAgent
 
 API_PREFIX = "/api/v1"
 
@@ -66,10 +66,10 @@ _reload_agent = {}
 
 
 def _agent(con):
-    """One PocketPayAgent per connection, so an injected LLM stub is reused."""
+    """One VenatorAgent per connection, so an injected LLM stub is reused."""
     key = id(con)
     if key not in _reload_agent:
-        _reload_agent[key] = PocketPayAgent(con)
+        _reload_agent[key] = VenatorAgent(con)
     return _reload_agent[key]
 
 
@@ -394,8 +394,19 @@ def dispatch(con, method, path, query=None, body=None):
     p = path[len(API_PREFIX):] if path.startswith(API_PREFIX) else path
 
     def one(prefix):
+        """Match a single-segment id: /transactions/<id> exactly."""
         m = re.fullmatch(prefix + r"/([^/]+)", p)
         return m.group(1) if m else None
+
+    def sub(prefix):
+        """Match an id plus a trailing action: /transactions/<id>/<action>.
+
+        Returns (id, action) or (None, None). `one()` deliberately refuses a
+        trailing segment, so the two are kept separate: a bare id and an
+        id-with-action are different routes and must not be confused.
+        """
+        m = re.fullmatch(prefix + r"/([^/]+)/([^/]+)", p)
+        return (m.group(1), m.group(2)) if m else (None, None)
 
     try:
         if method == "GET":
@@ -426,21 +437,23 @@ def dispatch(con, method, path, query=None, body=None):
             return {"error": "no such route"}, 404
 
         if method == "POST":
-            tid = one("/transactions")
-            if tid and p.endswith("/triage"):
-                out, err = post_triage(con, tid)
-                return (out, 200) if out else ({"error": err}, 404)
-            if tid and p.endswith("/resolve"):
-                out, err = post_resolve(con, tid, body.get("choice", ""),
-                                        body.get("who", "student"))
-                return (out, 200) if out else ({"error": err}, 404)
-            if tid and p.endswith("/guardian"):
-                out, err = post_guardian(con, tid, body.get("decision", ""),
-                                         body.get("guardian_id"))
-                return (out, 200) if out else ({"error": err}, 404)
-            if tid and p.endswith("/cancel-window"):
-                out, err = post_cancel_window(con, tid, body.get("action", ""))
-                return (out, 200) if out else ({"error": err}, 404)
+            tid, action = sub("/transactions")
+            if tid:
+                if action == "triage":
+                    out, err = post_triage(con, tid)
+                    return (out, 200) if out else ({"error": err}, 404)
+                if action == "resolve":
+                    out, err = post_resolve(con, tid, body.get("choice", ""),
+                                            body.get("who", "student"))
+                    return (out, 200) if out else ({"error": err}, 404)
+                if action == "guardian":
+                    out, err = post_guardian(con, tid, body.get("decision", ""),
+                                             body.get("guardian_id"))
+                    return (out, 200) if out else ({"error": err}, 404)
+                if action == "cancel-window":
+                    out, err = post_cancel_window(con, tid, body.get("action", ""))
+                    return (out, 200) if out else ({"error": err}, 404)
+                return {"error": f"no such action on a transaction: {action}"}, 404
             if p == "/report":
                 out, err = post_report(con, body.get("message"),
                                        body.get("student", "You"),

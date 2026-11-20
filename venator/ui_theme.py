@@ -1,4 +1,4 @@
-# ui_theme.py - POCKETPAY design system (brushed-steel industrial).
+# ui_theme.py - VENATOR design system (brushed-steel industrial).
 # Single source of truth for every colour, type size and surface in the app.
 # Look is deliberately corporate and dense: steel gradients, one amber accent,
 # a calm teal for labels and charts. White panels, hairline dividers, no tiles.

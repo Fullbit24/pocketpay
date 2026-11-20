@@ -1,4 +1,4 @@
-#pocketpay/rules/cancel_window.py — HS-1.4, the post-confirmation cancel window.
+#venator/rules/cancel_window.py — HS-1.4, the post-confirmation cancel window.
 #
 # A student who confirms a held payment (PENDING_CONFIRMATION) sometimes regrets
 # it seconds later. This module gives that confirmation a short, policy-defined
@@ -225,7 +225,7 @@ def evaluate(con, ctx, analysis, recipient, state=None) -> None:
 # --------------------------------------------------------------------------
 # Self-test: the three live scenarios from the specification, exercised against
 # a temporary in-memory database so the demo's own dataset is never touched.
-# Run: ~/.venv/bin/python -m pocketpay.rules.cancel_window
+# Run: ~/.venv/bin/python -m venator.rules.cancel_window
 # --------------------------------------------------------------------------
 def _build_temp_con():
     """In-memory sqlite with the real schema and one held payment."""

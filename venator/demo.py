@@ -1,13 +1,13 @@
 #demo.py — the presentation runner. Executes every scenario from the dataset,
 #streams the visible decision log for each, drives the human-confirmation flows
 #(scripted, so the demo never dead-ends), then prints the staff-hours-saved
-#summary. Run: ~/.venv/bin/python -m pocketpay.demo
+#summary. Run: ~/.venv/bin/python -m venator.demo
 #
 #Loop-proofing proof: TX-007 is triaged TWICE; the second call must hit the
 #loop guard and return instantly without re-calling the LLM or re-asking.
 
 from . import db
-from .agent import PocketPayAgent
+from .agent import VenatorAgent
 
 # scripted human answers for the interactive flow ("Confirm I Know This Seller")
 # — only for txns the guard is EXPECTED to hold; auto-cleared ones stay untouched.
@@ -25,7 +25,7 @@ def show_log(con, txn_id, indent="    "):
 
 def main():
     con = db.connect()
-    agent = PocketPayAgent(con)
+    agent = VenatorAgent(con)
     txns = [r["txn_id"] for r in con.execute(
         "SELECT txn_id FROM transactions ORDER BY txn_id").fetchall()]
 

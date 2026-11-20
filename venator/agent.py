@@ -14,7 +14,7 @@ from capri.openai_lib import ModelHouse
 from . import db, guard, tools
 
 SYSTEM = (
-    "You are PocketPay's fraud-triage analyst for a university campus wallet. "
+    "You are Venator's fraud-triage analyst for a university campus wallet. "
     "Read a student chat message about a payment and judge scam risk. "
     "Consider: manufactured urgency, scarcity pressure, too-good prices, "
     "off-platform or suspicious links, credential/password requests, "
@@ -74,7 +74,7 @@ def _parse_analysis(raw):
     return None
 
 
-class PocketPayAgent:
+class VenatorAgent:
     def __init__(self, con=None, llm=None):
         self.con = con or db.connect()
         self.llm = llm  # lazy: pass None to use Ray's local ModelHouse

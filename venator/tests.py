@@ -1,4 +1,4 @@
-#tests.py — fast, deterministic, no LLM needed. Run: ~/.venv/bin/python -m pocketpay.tests
+#tests.py — fast, deterministic, no LLM needed. Run: ~/.venv/bin/python -m venator.tests
 from . import guard
 from .agent import _parse_analysis
 

@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="assets/pocketpay-mark.svg" alt="PocketPay" width="104" height="104">
+<img src="assets/venator-mark.svg" alt="Venator" width="104" height="104">
 
-# 🛡️ PocketPay
+# 🛡️ Venator
 
 ### Campus Wallet & Scam Defense Agent
 
@@ -137,22 +137,22 @@ flowchart TD
 
 | Stage | File | Responsibility | Nature |
 |:--:|---|---|:--:|
-| ① | `pocketpay/tools.py: get_transaction_context` | load the flagged transaction | 🔵 fact |
-| ② | `pocketpay/tools.py: check_scam_link` | known-phishing URL lookup | 🔵 fact |
-| ③ | `pocketpay/agent.py: _analyze` | risk, confidence, indicators, reason | 🟡 **opinion** |
-| ④ | `pocketpay/tools.py: verify_campus_recipient` | tier, account age, report count | 🔵 fact |
-| ⑤ | `pocketpay/guard.py: decide` | the verdict | 🔴 **authority** |
-| ⑥ | `pocketpay/tools.py: update_payment_state` | the only legal state mutation | 🟢 money |
+| ① | `venator/tools.py: get_transaction_context` | load the flagged transaction | 🔵 fact |
+| ② | `venator/tools.py: check_scam_link` | known-phishing URL lookup | 🔵 fact |
+| ③ | `venator/agent.py: _analyze` | risk, confidence, indicators, reason | 🟡 **opinion** |
+| ④ | `venator/tools.py: verify_campus_recipient` | tier, account age, report count | 🔵 fact |
+| ⑤ | `venator/guard.py: decide` | the verdict | 🔴 **authority** |
+| ⑥ | `venator/tools.py: update_payment_state` | the only legal state mutation | 🟢 money |
 
 ### 🔁 The loop guard
-`pocketpay/agent.py: triage` — if a transaction is already awaiting a human, already escalated, or
+`venator/agent.py: triage` — if a transaction is already awaiting a human, already escalated, or
 already settled, `triage()` **returns immediately**. No second LLM call. No re-asking. No polling.
 
 State lives in SQLite, so it survives a restart. There is **no daemon, no queue worker, and no
 `while True` anywhere in the codebase** — the agent is *called*, it reads the world, it acts, it exits.
 
 ### 🩹 The parser
-`pocketpay/agent.py: _parse_analysis` — a small local model sometimes truncates its JSON. The parser
+`venator/agent.py: _parse_analysis` — a small local model sometimes truncates its JSON. The parser
 repairs unbalanced braces, trims trailing junk, and falls back to regex extraction of the two numbers
 it needs. If all of that fails the analysis is `None` — which the guard treats as **no opinion**, not
 as **safe**.
@@ -278,9 +278,9 @@ $PY main.py ui                 # ⌨️  original terminal interface (fallback)
 
 ## 🖥️ The dashboard
 
-`pocketpay/web.py` is **stdlib-only** — `http.server` plus a single embedded HTML page. No build
+`venator/web.py` is **stdlib-only** — `http.server` plus a single embedded HTML page. No build
 step. No CDN. No npm. It decides **nothing**; it reads the same SQLite database and calls the same
-`PocketPayAgent` the terminal does.
+`VenatorAgent` the terminal does.
 
 <div align="center">
 
@@ -344,7 +344,7 @@ Hit **Respond as student** → confirm → 🟢 `CLEARED`.
 Any message that arrives — including one typed into the box while the system is open — runs the
 real chain and escalates with a plain-English reason. Nothing is scripted, nothing is mocked up:
 
-> *"selling front row fest pass 50 aed!! send to @campus_tix_99 fast https://pocketpay-claims.top/tix"*
+> *"selling front row fest pass 50 aed!! send to @campus_tix_99 fast https://venator-claims.top/tix"*
 
 </details>
 
@@ -361,7 +361,7 @@ asserted.
 
 ## 📊 The dataset
 
-`pocketpay/db.py` builds `campus_wallet_logs.sqlite` — the schema, the 21 scenarios, the recipient
+`venator/db.py` builds `campus_wallet_logs.sqlite` — the schema, the 21 scenarios, the recipient
 directory (tiers, account ages, report counts), the scam-link registry, the broadcast feed, and the
 decision log.
 
@@ -378,7 +378,7 @@ decision log.
   phishing, a repeat offender, low-confidence slang, three genuinely uncertain mid-risk cases, a
   **directory outage**, and both human resolutions.
 - **7 real messages mined from the [UCI SMS Spam Collection](https://archive.ics.uci.edu/dataset/228/sms+spam+collection)**
-  (`pocketpay/miner.py`) — the open dataset the brief recommends — pulled into the same pipeline.
+  (`venator/miner.py`) — the open dataset the brief recommends — pulled into the same pipeline.
   **All 7 real scams escalate.** ⚠️
 
 > 🏷️ Sample data is synthetic and labelled as such in the UI. The mined corpus is public research data.
@@ -445,9 +445,9 @@ rules, state machine, single writer — are **short enough to read in one sittin
 ## 🗂️ Repository layout
 
 ```
-📦 pocketpay
+📦 venator
 ├─ 🚀 main.py                 launcher: build | web | tests | demo | ui
-├─ 📁 pocketpay/
+├─ 📁 venator/
 │  ├─ 🧠 db.py                schema + 21 scenarios + recipient directory (the dataset brain)
 │  ├─ ⛏️ miner.py             mines 7 real messages from the UCI SMS Spam Collection
 │  ├─ 🔧 tools.py             the 3 mock services + scam-link feed; the state machine lives here

@@ -1,0 +1,18 @@
+[Unit]
+Description=Venator dashboard and HTTP API
+Documentation=file:/home/rayan/Documents/agent/DEPLOYMENT.md
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/rayan/Documents/agent
+Environment=VENATOR_PORT=8401
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/rayan/.venv/bin/python /home/rayan/Documents/agent/main.py web
+Restart=on-failure
+RestartSec=3
+# The dashboard binds 127.0.0.1 only; keep the process on the user's own account.
+# Nothing here needs root.
+
+[Install]
+WantedBy=default.target

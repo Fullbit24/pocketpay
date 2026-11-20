@@ -162,7 +162,7 @@ def evaluate(con, ctx, analysis, recipient, state=None):
 
 
 # ---------------------------------------------------------------------------
-# Self-test. Run: ~/.venv/bin/python -m pocketpay.rules.lookalike_vendor
+# Self-test. Run: ~/.venv/bin/python -m venator.rules.lookalike_vendor
 # ---------------------------------------------------------------------------
 def _selftest():
     from .. import db

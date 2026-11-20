@@ -1,5 +1,5 @@
 #ui.py — live campus terminal for the demo. This is what you open on stage.
-#Run: ~/.venv/bin/python -m pocketpay.ui
+#Run: ~/.venv/bin/python -m venator.ui
 #  t <txn_id>  triage a flagged transaction (full agent chain)
 #  r <txn_id>  answer a pending confirmation (confirm/cancel)
 #  l <txn_id>  show decision log
@@ -10,18 +10,18 @@
 import sys
 
 from . import db
-from .agent import PocketPayAgent
+from .agent import VenatorAgent
 
 BANNER = """
   ╔══════════════════════════════════════════════╗
-  ║  PocketPay · Campus Wallet & Scam Defense    ║
+  ║  Venator · Campus Wallet & Scam Defense    ║
   ║  agent = opinion · guard = decision · code = money
   ╚══════════════════════════════════════════════╝"""
 
 
 def main():
     con = db.connect()
-    agent = PocketPayAgent(con)
+    agent = VenatorAgent(con)
     print(BANNER)
     n = con.execute("SELECT COUNT(*) c FROM transactions").fetchone()["c"]
     pend = con.execute("SELECT COUNT(*) c FROM transactions WHERE state='PENDING_CONFIRMATION'").fetchone()["c"]
@@ -30,7 +30,7 @@ def main():
 
     while True:
         try:
-            cmd = input("pocketpay> ").strip()
+            cmd = input("venator> ").strip()
         except (EOFError, KeyboardInterrupt):
             print()
             return
