@@ -39,7 +39,7 @@ The model reads the message. The code decides. The human holds the last word.
 [**The rules**](#-the-decision-engine-rules-r1r7) ·
 [**Safety**](#-the-safety-invariants) ·
 [**Run it**](#-run-it) ·
-[**Demo script**](#-demo-script-for-judges-4-min) ·
+[**Walkthrough**](#-walkthrough-4-min) ·
 [**Dataset**](#-the-dataset) ·
 [**Limits**](#-known-limits-stated-honestly)
 
@@ -54,10 +54,10 @@ The model reads the message. The code decides. The human holds the last word.
 | 💡 | [Why this exists](#-why-this-exists) | The problem, and why the LLM/authority split is the only defensible answer |
 | 🏗️ | [Architecture](#-architecture) | Six stages, four modules, no framework |
 | ⚖️ | [The decision engine](#-the-decision-engine-rules-r1r7) | Rules **R1–R7**, first match wins |
-| 🔐 | [The safety invariants](#-the-safety-invariants) | Four claims we'd defend under questioning |
+| 🔐 | [The safety invariants](#-the-safety-invariants) | Four properties the design guarantees |
 | 🚀 | [Run it](#-run-it) | Five commands |
-| 🖥️ | [The dashboard](#-the-dashboard) | The stage interface |
-| 🎬 | [Demo script](#-demo-script-for-judges-4-min) | Five moves, ~4 minutes |
+| 🖥️ | [The dashboard](#-the-dashboard) | The operations console |
+| 🎬 | [Walkthrough](#-walkthrough-4-min) | Five ways to see it work |
 | 📊 | [The dataset](#-the-dataset) | 21 scenarios, 7 of them real |
 | ✅ | [Brief checklist](#-what-we-shipped-against-the-brief) | Requirement → status → where |
 | 🚁 | [Stretch goals](#-stretch-goals) | What we built on top |
@@ -189,7 +189,7 @@ can replay the reasoning.
 
 ## 🔐 The safety invariants
 
-The claims we'd defend under questioning. Each one is enforced by **structure**, not by care.
+The properties this design guarantees. Each one is enforced by **structure**, not by care.
 
 <table>
 <tr>
@@ -271,9 +271,8 @@ $PY main.py demo               # 🎬 scripted 21-scenario run in the terminal
 $PY main.py ui                 # ⌨️  original terminal interface (fallback)
 ```
 
-> 💡 The dashboard is the stage interface. `tests` and `demo` are the fallbacks — if the venue's
-> network, browser, or the local model misbehaves, **`demo` runs the entire narrative from a
-> terminal with zero dependencies.**
+> 💡 `tests` and `demo` exist so the system can be exercised without a browser or a network — the
+> full narrative runs end to end from a terminal with zero dependencies.
 
 ---
 
@@ -299,71 +298,64 @@ step. No CDN. No npm. It decides **nothing**; it reads the same SQLite database 
 
 > 🎨 **Design note:** the palette is muted and semantic — green clears, amber waits, red escalates,
 > never decorative — with focus rings and `prefers-reduced-motion` respected. It's an operations
-> console, not a pitch deck.
+> console, not a landing page.
 
 ---
 
-## 🎬 Demo script for judges (≈4 min)
+## 🎬 Walkthrough (~4 min)
 
-<table>
-<tr><td width="52" align="center"><h3>1️⃣</h3></td><td>
+<details open>
+<summary><b>1️⃣ The brief's own scam — <code>TX-003</code></b></summary>
 
-### The brief's own scam — `TX-003`
-
-Open it → **Run agent chain**. Narrate the steps as they paint:
+Open it → **Run agent chain**. The panel fills in live:
 
 - 🔵 the tool reads the facts
 - 🟡 the model calls it at **risk 96**, indicator *"fake .top domain"*
 - 🔴 the guard escalates under **R1c**
 
-Then point at the footer: the link is now on the **campus broadcast feed**. 📢
+The link is now on the **campus broadcast feed**. 📢
 
-</td></tr>
-<tr><td align="center"><h3>2️⃣</h3></td><td>
+</details>
 
-### The second student — `TX-013`
+<details open>
+<summary><b>2️⃣ The second student — <code>TX-013</code></b></summary>
 
 Same phishing URL, different sender. **This one never reaches the model** —
 `check_scam_link` catches it first and **R1** escalates on the hard fact alone.
 
-> *"The system learned from a case that happened ten seconds ago."* ⚡
+> ⚡ The system reacted to a case that happened ten seconds earlier.
 
-</td></tr>
-<tr><td align="center"><h3>3️⃣</h3></td><td>
+</details>
 
-### Money that needs a human — `TX-012`
+<details open>
+<summary><b>3️⃣ Money that needs a human — <code>TX-012</code></b></summary>
 
 800 AED for a laptop share, all above board. Chain → 🟡 `PENDING_CONFIRMATION`.
 
-> *"The guard will not auto-clear 800 AED, and the model can't make it. Watch who does."*
+The guard will not auto-clear 800 AED, and the model can't make it. **A person does.**
 
 Hit **Respond as student** → confirm → 🟢 `CLEARED`.
 
-</td></tr>
-<tr><td align="center"><h3>4️⃣</h3></td><td>
+</details>
 
-### 🎤 The judge moment
+<details open>
+<summary><b>4️⃣ Any message, live</b></summary>
 
-Ask a judge to read you a shady message, or say this one out loud:
+Any message that arrives — including one typed into the box while the system is open — runs the
+real chain and escalates with a plain-English reason. Nothing is scripted, nothing is mocked up:
 
 > *"selling front row fest pass 50 aed!! send to @campus_tix_99 fast https://pocketpay-claims.top/tix"*
 
-Paste it into the live box → **the real chain triages it in front of them** and escalates with a
-plain-English reason. **Nothing is scripted. Nothing is faked.**
+</details>
 
-</td></tr>
-<tr><td align="center"><h3>5️⃣</h3></td><td>
+<details open>
+<summary><b>5️⃣ The loop guard — triage <code>TX-003</code> again</b></summary>
 
-### 🥇 Optional — the killer detail
+Instead of re-asking, the **loop-guard** step appears: state is already `ESCALATED`, no second model
+call. The "no infinite loops / no repeated questioning" requirement, demonstrated rather than
+asserted.
 
-Run the chain on `TX-003` **again**. Instead of re-asking, the **loop-guard** step appears: state is
-already `ESCALATED`, no second model call.
-
-> That's the brief's *"no infinite loops / no repeated questioning"* requirement —
-> **demonstrated rather than asserted.**
-
-</td></tr>
-</table>
+</details>
 
 ---
 
@@ -413,7 +405,7 @@ decision log.
   invoked*. **Demonstrated live by the TX-003 → TX-013 pair.**
 - **⏱️ Staff hours saved** — every auto-cleared transfer is quantified on the dashboard header. The
   assistant's worth, in the units a school actually cares about.
-- **🎲 Live ad-hoc triage** — any message, typed in front of the judges, runs the real agent chain.
+- **🎲 Live ad-hoc triage** — any message that arrives runs the real agent chain.
 
 ---
 
@@ -432,7 +424,7 @@ failure, engine outage, directory timeout. A reviewer never has to guess why a t
 
 **🧱 Boring where it counts.**
 No framework. No ORM. No async. No orchestration library. SQLite and stdlib. The parts that matter —
-rules, state machine, single writer — are **short enough to read aloud on stage**, which is the point.
+rules, state machine, single writer — are **short enough to read in one sitting**, which is the point.
 
 ---
 
@@ -461,9 +453,9 @@ rules, state machine, single writer — are **short enough to read aloud on stag
 │  ├─ 🔧 tools.py             the 3 mock services + scam-link feed; the state machine lives here
 │  ├─ 🤖 agent.py             the triage loop, the defensive JSON parser, the loop guard
 │  ├─ ⚖️ guard.py             R1–R7, pure function, the ONLY decider
-│  ├─ 🖥️ web.py               stage dashboard (stdlib http.server + one HTML page)
+│  ├─ 🖥️ web.py               operations dashboard (stdlib http.server + one HTML page)
 │  ├─ ⌨️ ui.py                terminal fallback interface
-│  ├─ 🎬 demo.py              scripted 21-scenario presentation run
+│  ├─ 🎬 demo.py              scripted 21-scenario end-to-end run
 │  └─ 🧪 tests.py             12 unit tests: guard rules + parser repair
 ├─ 📁 capri/
 │  ├─ 🔌 openai_lib.py        ModelHouse — thin streaming client for the local model
@@ -477,16 +469,17 @@ rules, state machine, single writer — are **short enough to read aloud on stag
 
 <div align="center">
 
-### 🛡️ Built for **TechX Dubai '26**
+### 🛡️ TechX Dubai '26 — Domain 1: FinTech Fraud & Compliance
 
-*Every number on screen during the demo comes from a live run of this code against the local model.*
+*Every number in this README and every line the dashboard prints comes from a live run of this code
+against the local model.*
 
-**Nothing is a mock-up. Nothing is hard-coded for the pitch.**
+**Nothing on screen is a mock-up. Nothing is hard-coded for the output.**
 
 <br>
 
 [![Made with](https://img.shields.io/badge/made%20with-SQLite%20%2B%20stdlib%20%2B%20stubbornness-2F3A45?style=for-the-badge)](#)
 
-<sub>⭐ If you're a judge reading this and you want the three-minute version — jump to <a href="#-demo-script-for-judges-4-min">the demo script</a>.</sub>
+<sub>New here? The <a href="#-walkthrough-4-min">walkthrough</a> shows the system working in five steps.</sub>
 
 </div>
