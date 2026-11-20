@@ -80,10 +80,20 @@ def update_payment_state(con, txn_id, new_state, risk=None, confidence=None,
     if row is None:
         raise KeyError(f"no such transaction: {txn_id}")
     legal = {
-        "RECEIVED": {"TRIAGED", "PENDING_CONFIRMATION", "ESCALATED", "CLEAR"},
-        "TRIAGED": {"CLEAR", "PENDING_CONFIRMATION", "ESCALATED"},
-        "PENDING_CONFIRMATION": {"CLEARED", "CANCELLED", "ESCALATED"},
-        "CLEAR": set(), "CLEARED": set(), "CANCELLED": set(),
+        "RECEIVED": {"TRIAGED", "PENDING_CONFIRMATION", "PENDING_GUARDIAN", "ESCALATED", "CLEAR"},
+        "TRIAGED": {"CLEAR", "PENDING_CONFIRMATION", "PENDING_GUARDIAN", "ESCALATED"},
+        "PENDING_CONFIRMATION": {"CLEARED", "CANCELLED", "ESCALATED",
+                                 "CONFIRMED_CANCELLABLE", "PENDING_GUARDIAN"},  # student confirmed; window opens
+        # A confirmation is reversible only through the cancel window. The ticket
+        # may resolve to CANCELLED (taken back) or RELEASED (window elapsed, money
+        # moves) and to nothing else; every other transition out of this state is
+        # illegal and raises below.
+        "CONFIRMED_CANCELLABLE": {"CANCELLED", "RELEASED"},
+        # A transfer awaiting a guardian is decided by the second approver: the
+        # guardian approves (CLEARED), declines (CANCELLED), or the hold lapses
+        # (RELEASED). Nothing else moves it.
+        "PENDING_GUARDIAN": {"CLEARED", "CANCELLED", "RELEASED"},
+        "CLEAR": set(), "CLEARED": set(), "CANCELLED": set(), "RELEASED": set(),
         "ESCALATED": {"PENDING_CONFIRMATION", "CANCELLED"},  # staff may downgrade
     }
     if new_state not in legal.get(row["state"], set()):

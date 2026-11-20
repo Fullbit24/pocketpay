@@ -107,16 +107,23 @@ class PocketPayAgent:
         (action, rule, explanation). Safe to call repeatedly — stateful."""
         con = self.con
 
-        # LOOP GUARD: a txn awaiting human/staff answer is never re-triaged.
+        # LOOP GUARD: a txn awaiting human/staff/guardian answer is never re-triaged.
         cur_state = con.execute("SELECT state FROM transactions WHERE txn_id=?",
                                 (txn_id,)).fetchone()
-        if cur_state and cur_state["state"] in ("PENDING_CONFIRMATION", "ESCALATED",
-                                                "CLEAR", "CLEARED", "CANCELLED"):
+        if cur_state and cur_state["state"] in ("PENDING_CONFIRMATION", "PENDING_GUARDIAN",
+                                                "ESCALATED", "CLEAR", "CLEARED",
+                                                "CANCELLED", "CONFIRMED_CANCELLABLE"):
             db.log_decision(con, txn_id, "agent", "loop_guard",
-                            f"state is already {cur_state['state']} — not re-asking, not re-deciding")
+                            f"state is already {cur_state['state']} - not re-asking, not re-deciding")
             row = con.execute("SELECT decision, explanation FROM transactions WHERE txn_id=?",
                               (txn_id,)).fetchone()
             return cur_state["state"], "loop_guard", row["explanation"]
+
+        # the curveball checks run as independent services, each reading its
+        # thresholds from config/policy.yaml. A disabled check returns nothing
+        # and the chain carries on - none of them is required for the system
+        # to make a decision.
+        checks = {}
 
         # 1. facts
         ctx = tools.get_transaction_context(con, txn_id)
@@ -129,14 +136,41 @@ class PocketPayAgent:
             db.log_decision(con, txn_id, "tool", "check_scam_link",
                             f"URL {link_hit['url']} already confirmed scam (first seen {link_hit['first_seen']})")
 
-        # 2. brain (opinion only — it cannot block anyone)
-        analysis = self._analyze(ctx)
+        # 1c. message text is DATA. Instruction-like phrasing is removed before
+        # the model ever sees it, and any hit is recorded so the guard escalates.
+        clean_message = ctx["message"]
+        try:
+            from .rules import injection_attempt as _inj
+            clean_message, inj_hits = _inj.sanitize(ctx["message"])
+            if inj_hits:
+                checks["injection_hits"] = inj_hits
+                db.log_decision(con, txn_id, "tool", "sanitize_message",
+                                f"removed {len(inj_hits)} instruction-like phrase(s) "
+                                f"before analysis: {inj_hits}")
+        except Exception as e:
+            db.log_decision(con, txn_id, "tool", "sanitize_message_skipped",
+                            f"{type(e).__name__}: {e}")
+
+        # 1d. a run of small transfers to one recipient, totalled in Python
+        try:
+            from .rules import split_payment as _split
+            hit = _split.evaluate(con, ctx, analysis=None, recipient=None, state=checks)
+            if hit:
+                checks["split_total"] = hit[2]
+                db.log_decision(con, txn_id, "tool", "rolling_total",
+                                f"pair total crossed the policy threshold - {hit[2]}")
+        except Exception as e:
+            db.log_decision(con, txn_id, "tool", "rolling_total_skipped",
+                            f"{type(e).__name__}: {e}")
+
+        # 2. brain (opinion only - it cannot block anyone)
+        analysis = self._analyze({**ctx, "message": clean_message})
         if analysis:
             db.log_decision(con, txn_id, "llm", "analyze_message",
                             f"risk={analysis['risk_score']}/100 conf={analysis['confidence']:.2f} "
                             f"indicators={analysis['indicators'] or 'none'} :: {analysis['explanation']}")
 
-        # 3. directory (may time out — handled, never crashes the pipeline)
+        # 3. directory (may time out - handled, never crashes the pipeline)
         tool_failed = False
         try:
             recipient = tools.verify_campus_recipient(con, ctx["recipient_id"])
@@ -147,11 +181,36 @@ class PocketPayAgent:
         except tools.ToolTimeout as e:
             recipient, tool_failed = None, True
             db.log_decision(con, txn_id, "tool", "verify_campus_recipient_TIMEOUT",
-                            f"{e} — falling back, no crash")
+                            f"{e} - falling back, no crash")
 
-        # 4. THE GUARD — deterministic code owns the decision
+        # 3b. does the recipient name imitate a verified vendor?
+        if recipient:
+            try:
+                from .rules import lookalike_vendor as _look
+                hit = _look.evaluate(con, ctx, analysis, recipient, state=checks)
+                if hit:
+                    checks["lookalike"] = hit[2]
+                    db.log_decision(con, txn_id, "tool", "lookalike_check", hit[2])
+            except Exception as e:
+                db.log_decision(con, txn_id, "tool", "lookalike_check_skipped",
+                                f"{type(e).__name__}: {e}")
+
+        # 3c. does this payment need a guardian? read the student's age from the
+        # dataset - never assumed, never precomputed.
+        try:
+            from .rules import guardian_required as _guard
+            needed, why = _guard.requires_guardian(ctx, recipient)
+            if needed:
+                checks["guardian_required"] = why
+                db.log_decision(con, txn_id, "tool", "guardian_check", why)
+        except Exception as e:
+            db.log_decision(con, txn_id, "tool", "guardian_check_skipped",
+                            f"{type(e).__name__}: {e}")
+
+        # 4. THE GUARD - deterministic code owns the decision
         action, rule, reason = guard.decide(ctx, analysis, recipient,
-                                            scam_link_hit=link_hit, tool_failed=tool_failed)
+                                            scam_link_hit=link_hit, tool_failed=tool_failed,
+                                            state=checks, con=con)
         expl = (analysis["explanation"] if analysis else "")
         db.log_decision(con, txn_id, "guard", f"decide -> {action}", f"rule {rule}: {reason}")
 
@@ -172,16 +231,47 @@ class PocketPayAgent:
         return action, rule, expl or reason
 
     def resolve(self, txn_id, human_choice, who="student"):
-        """Human answers a PENDING_CONFIRMATION once: 'confirm' or 'cancel'.
-        Deterministic mapping — the human's word, the code's action."""
+        """Human answers a pending transaction once.
+
+        The human's word is the only input; the code decides the transition.
+        A confirmation does not release money immediately - it opens the cancel
+        window, so a student who answers in error can still take it back.
+        """
         choice = human_choice.strip().lower()
+        row = self.con.execute("SELECT state FROM transactions WHERE txn_id=?",
+                               (txn_id,)).fetchone()
+        cur = row["state"] if row else None
+
         if choice in ("confirm", "c", "yes", "i know this seller"):
-            new = "CLEARED"
+            # a guardian approval is a different approver, and it clears outright
+            if cur == "PENDING_GUARDIAN":
+                new = "CLEARED"
+                act = "guardian_response"
+            elif cur == "PENDING_CONFIRMATION":
+                try:
+                    from .rules import cancel_window as _cw
+                    return _cw.confirm(self.con, txn_id)
+                except Exception:
+                    new = "CLEARED"
+                    act = f"{who}_response"
+            else:
+                new = "CLEARED"
+                act = f"{who}_response"
         elif choice in ("cancel", "x", "no", "report"):
-            new = "CANCELLED"
+            if cur == "CONFIRMED_CANCELLABLE":
+                try:
+                    from .rules import cancel_window as _cw
+                    return _cw.cancel_or_release(self.con, txn_id, "cancel")
+                except Exception:
+                    new = "CANCELLED"
+                    act = f"{who}_response"
+            else:
+                new = "CANCELLED"
+                act = f"{who}_response"
         else:
             raise ValueError("answer 'confirm' or 'cancel'")
-        db.log_decision(self.con, txn_id, "human", f"{who}_response", f"chose {choice} -> {new}")
+
+        db.log_decision(self.con, txn_id, "human", act, f"chose {choice} -> {new}")
         tools.update_payment_state(self.con, txn_id, new)
         db.log_decision(self.con, txn_id, "system", "state_updated", f"txn {txn_id} -> {new}")
         return new

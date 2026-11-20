@@ -1,0 +1,145 @@
+# policy.yaml - POCKETPAY decision policy.
+#
+# EVERY number and toggles the guard reads lives in this file. No threshold is
+# hard-coded anywhere in Python. Change a value here, restart, and the system
+# behaves differently - which is what "do not hard-code it" means.
+#
+# The guard rule order is defined in `rules:` at the bottom. Each entry is a
+# module in `pocketpay/rules/`. Remove one to switch it off; the system still runs.
+
+version: 3
+currency: AED
+
+# ---------------------------------------------------------------------------
+# Amounts
+# ---------------------------------------------------------------------------
+amounts:
+  # A single transfer at or below this can auto-clear when everything else is calm.
+  auto_clear_limit: 300
+  # Uncertain (mid-risk, unverified) transfers above this go to staff.
+  uncertain_escalate_above: 150
+  # Above this, a human always confirms - no rule may auto-clear it.
+  human_confirm_always_above: 250
+
+# ---------------------------------------------------------------------------
+# Risk
+# ---------------------------------------------------------------------------
+risk:
+  # At or above this the transfer escalates on risk alone.
+  high: 70
+  # The "uncertain middle" - escalate when combined with an unverified recipient.
+  mid_low: 30
+  # Model confidence below this means we ask a human instead of acting on it.
+  min_confidence: 0.5
+
+# ---------------------------------------------------------------------------
+# HS-1.1  Split-payment scam
+# ---------------------------------------------------------------------------
+split_payment:
+  enabled: true
+  # Rolling window for a sender -> recipient pair.
+  window_minutes: 60
+  # If the rolling total for the pair reaches this, the next transfer holds.
+  trigger_total: 200
+  # Transfers of at least this size count toward the rolling total. Smaller
+  # canteen-style payments are ignored so normal small spending is not punished.
+  min_counted_amount: 24
+
+# ---------------------------------------------------------------------------
+# HS-1.2  Lookalike vendor
+# ---------------------------------------------------------------------------
+lookalike:
+  enabled: true
+  # A normalised name this similar (but not identical) to a verified vendor
+  # is treated as high risk. 1.0 = identical.
+  similarity_threshold: 0.87
+  # Normalisation rewrites these before comparing.
+  digit_swaps:
+    "0": "o"
+    "1": "l"
+    "3": "e"
+    "5": "s"
+
+# ---------------------------------------------------------------------------
+# HS-1.3  Prompt injection from message text
+# ---------------------------------------------------------------------------
+injection:
+  enabled: true
+  # Instruction-like phrases. Message text is DATA - it can flag a transfer,
+  # it can never clear one. Any hit is escalated and the text is redacted
+  # before the model sees it.
+  patterns:
+    - "system:"
+    - "assistant:"
+    - "note for the"
+    - "note to the"
+    - "ignore your rules"
+    - "ignore previous"
+    - "disregard"
+    - "pre-approved"
+    - "preapproved"
+    - "mark the payment safe"
+    - "mark it safe"
+    - "clear it now"
+    - "this seller is verified"
+    - "you are allowed to"
+    - "override"
+
+# ---------------------------------------------------------------------------
+# HS-1.4  Cancel window after a student confirms
+# ---------------------------------------------------------------------------
+cancel_window:
+  enabled: true
+  # Seconds a student has to take back a confirmation.
+  seconds: 120
+
+# ---------------------------------------------------------------------------
+# HS-1.5  Guardian approval for younger students
+# ---------------------------------------------------------------------------
+guardian:
+  enabled: true
+  # Students strictly under this age need a guardian for peer transfers.
+  minor_age_below: 16
+  # ...but only above this amount. Small transfers are unaffected.
+  requires_approval_above: 100
+  # Roles counted as peer transfers (as opposed to vendors).
+  peer_tiers:
+    - trusted_peer
+    - unverified
+
+# ---------------------------------------------------------------------------
+# Recipient trust
+# ---------------------------------------------------------------------------
+recipients:
+  trusted_tiers:
+    - verified_vendor
+    - trusted_peer
+  # At or above this many confirmed reports the recipient escalates outright.
+  scam_reports_escalate_at: 2
+
+# ---------------------------------------------------------------------------
+# Services
+# ---------------------------------------------------------------------------
+services:
+  # Directory lookup timeout, seconds. On timeout the transfer HOLDS, never blocks.
+  directory_timeout_seconds: 4.0
+
+# ---------------------------------------------------------------------------
+# Rule order - first match wins. Names map to pocketpay/rules/*.py
+# ---------------------------------------------------------------------------
+rules:
+  - known_scam_link        # R1
+  - repeat_offender        # R1b
+  - injection_attempt      # R1d
+  - lookalike_vendor       # R1e
+  - analysis_missing       # R2
+  - low_confidence         # R2b
+  - missing_risk           # R2c
+  - split_payment          # R1f
+  - unverified_high_risk   # R1c
+  - directory_outage       # R3
+  - high_risk              # R4
+  - uncertain_value        # R5
+  - guardian_required      # R6
+  - trusted_small          # R7
+  - default_hold           # R8
