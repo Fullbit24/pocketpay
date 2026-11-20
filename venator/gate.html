@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Venator — Campus Wallet &amp; Scam Defense</title>
+<meta name="description" content="Venator reviews every flagged payment on a campus wallet and decides, on its own, whether it is safe. The model reads the message. The code makes the decision.">
+<!--THEME-->
+<style>
+/* ---------- landing-specific layout ---------- */
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:auto}
+body{background:var(--page);color:var(--ink);
+  font:16px/1.6 'Barlow',ui-sans-serif,system-ui,sans-serif;
+  font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased;
+  display:block;overflow:auto}
+.cond{font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.02em}
+.wrap{max-width:1080px;margin:0 auto;padding:0 26px}
+
+/* ---------- top bar ---------- */
+.nav{display:flex;align-items:center;gap:18px;padding:16px 0}
+.nav .brand{display:flex;align-items:center;gap:11px;text-decoration:none;color:var(--ink)}
+.nav .wm{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:24px;
+  letter-spacing:.3em;padding-left:.3em;text-transform:uppercase;color:var(--mark)}
+.nav .sp{flex:1}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  font:600 15px 'Barlow',sans-serif;min-height:46px;padding:0 22px;border-radius:9px;
+  cursor:pointer;text-decoration:none;border:1px solid var(--panel-line);
+  background:var(--metal);color:var(--ink);box-shadow:inset 0 1px 0 #fff;
+  transition:transform .08s,box-shadow .12s}
+.btn:hover{box-shadow:inset 0 1px 0 #fff,0 3px 10px rgba(31,41,51,.14)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:linear-gradient(180deg,#FFC833,var(--amber));border-color:var(--amber-line);
+  color:#3A2B00;font-weight:600}
+.btn.ghost{background:rgba(255,255,255,.5)}
+.btn.lg{min-height:54px;padding:0 30px;font-size:16.5px}
+
+/* ---------- hero ---------- */
+.hero{padding:70px 0 60px;border-bottom:1px solid var(--panel-line)}
+.hero .kicker{font:600 12.5px 'Barlow',sans-serif;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--teal);margin-bottom:18px}
+.hero h1{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:64px;line-height:.98;
+  text-transform:uppercase;letter-spacing:.005em;color:var(--mark);max-width:15ch}
+.hero p.lede{margin-top:22px;font-size:19px;color:var(--ink-2);max-width:60ch}
+.hero .heroactions{margin-top:34px;display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.hero .meta{margin-top:44px;display:flex;gap:36px;flex-wrap:wrap}
+.hero .meta div{display:flex;flex-direction:column;gap:3px}
+.hero .meta b{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:31px;
+  line-height:1;color:var(--mark)}
+.hero .meta span{font-size:12.5px;color:var(--ink-3);letter-spacing:.05em;text-transform:uppercase;font-weight:600}
+
+/* ---------- thesis strip ---------- */
+.thesis{padding:44px 0;border-bottom:1px solid var(--panel-line)}
+.thesis .card{background:var(--panel);border:1px solid var(--panel-line);border-radius:14px;
+  padding:32px 34px;box-shadow:inset 0 1px 0 #fff}
+.thesis .q{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:30px;
+  line-height:1.18;text-transform:uppercase;color:var(--mark);max-width:34ch}
+.thesis .a{margin-top:16px;font-size:16.5px;color:var(--ink-2);max-width:70ch}
+.thesis .split{margin-top:22px;display:flex;gap:26px;flex-wrap:wrap}
+.thesis .split div{flex:1 1 240px;min-width:0;border-left:3px solid var(--amber);padding-left:14px}
+.thesis .split b{display:block;font-family:'Barlow Condensed',sans-serif;font-weight:700;
+  text-transform:uppercase;letter-spacing:.06em;font-size:15px}
+.thesis .split span{font-size:14.5px;color:var(--ink-2)}
+
+/* ---------- section ---------- */
+section.blk{padding:64px 0;border-bottom:1px solid var(--panel-line)}
+.blk .head{max-width:64ch;margin-bottom:38px}
+.blk h2{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:38px;line-height:1;
+  text-transform:uppercase;color:var(--mark)}
+.blk .head p{margin-top:14px;font-size:16.5px;color:var(--ink-2)}
+.grid{display:flex;gap:20px;flex-wrap:wrap}
+.grid .item{flex:1 1 300px;min-width:0;background:var(--panel);border:1px solid var(--panel-line);
+  border-radius:12px;padding:24px;box-shadow:inset 0 1px 0 #fff}
+.grid .item .n{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:15px;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--teal);margin-bottom:10px}
+.grid .item h3{font-size:18.5px;font-weight:600;margin-bottom:9px}
+.grid .item p{font-size:15px;color:var(--ink-2)}
+
+/* ---------- pipeline ---------- */
+.pipe{display:flex;flex-direction:column;gap:0;background:var(--panel);
+  border:1px solid var(--panel-line);border-radius:12px;overflow:hidden;box-shadow:inset 0 1px 0 #fff}
+.pipe .step{display:flex;align-items:baseline;gap:16px;padding:15px 22px;border-bottom:1px solid var(--hair)}
+.pipe .step:last-child{border-bottom:0}
+.pipe .step .tag{flex:none;width:96px;font:600 11.5px 'Barlow',sans-serif;letter-spacing:.08em;
+  text-transform:uppercase;border-radius:999px;padding:4px 10px;text-align:center}
+.pipe .step .txt{flex:1;font-size:15.5px}
+.pipe .step .txt b{font-weight:600}
+.pipe .step code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;
+  background:#EEF1F4;padding:2px 7px;border-radius:5px}
+.t-fact{background:#DCE6F5;color:#1E3A66}
+.t-opin{background:var(--md-bg);color:var(--md-tx)}
+.t-dec{background:var(--hi-bg);color:var(--hi-tx)}
+.t-money{background:var(--lo-bg);color:var(--lo-tx)}
+
+/* ---------- invariants ---------- */
+.inv{display:flex;gap:20px;flex-wrap:wrap}
+.inv .c{flex:1 1 240px;min-width:0;border-top:4px solid var(--teal);padding-top:16px}
+.inv .c b{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:20px;
+  text-transform:uppercase;color:var(--mark);display:block;margin-bottom:7px}
+.inv .c p{font-size:14.5px;color:var(--ink-2)}
+
+/* ---------- footer ---------- */
+footer{padding:44px 0 60px;display:flex;align-items:center;justify-content:space-between;
+  gap:20px;flex-wrap:wrap}
+footer .who{font-size:13.5px;color:var(--ink-3)}
+footer .who b{color:var(--ink-2)}
+
+@media(max-width:760px){
+  .hero h1{font-size:44px}
+  .hero{padding:44px 0 40px}
+  section.blk{padding:44px 0}
+  .blk h2{font-size:30px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ===== nav ===== -->
+  <nav class="nav">
+    <a class="brand" href="/">
+      <svg width="34" height="34" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+        <path d="M18 2L32 10V26L18 34L4 26V10Z" stroke="#2F3A45" stroke-width="1.5"/>
+        <path d="M12 12.5h8.5a5.5 5.5 0 0 1 0 11H12Z" stroke="#2F3A45" stroke-width="2.2" stroke-linejoin="round"/>
+        <circle cx="18.5" cy="18" r="2" fill="#F2A900"/>
+      </svg>
+      <span class="wm">Venator</span>
+    </a>
+    <span class="sp"></span>
+    <a class="btn primary" href="/login">Sign in</a>
+  </nav>
+
+  <!-- ===== hero ===== -->
+  <header class="hero">
+    <div class="kicker">TechX Dubai &rsquo;26 &middot; Domain 1 &middot; FinTech Fraud &amp; Compliance</div>
+    <h1>Every payment, read before it moves.</h1>
+    <p class="lede">
+      Students pay each other by message &mdash; and the message is where fraud lives. Venator reads
+      each flagged payment together with its message, clears the harmless ones on its own, holds the
+      uncertain ones for a human, and escalates genuine fraud. A two-person support team cannot read
+      every alert. Venator can.
+    </p>
+    <div class="heroactions">
+      <a class="btn primary lg" href="/login">Sign in to your wallet</a>
+    </div>
+    <div class="meta">
+      <div><b>1</b><span>model call per payment</span></div>
+      <div><b>15</b><span>deterministic rules</span></div>
+      <div><b>0</b><span>ways to freeze a wallet</span></div>
+    </div>
+  </header>
+
+  <!-- ===== thesis ===== -->
+  <section class="thesis">
+    <div class="card">
+      <div class="q">The model reads the message. The code makes the decision.</div>
+      <p class="a">
+        An LLM is genuinely good at reading messy human text &mdash; and genuinely unsafe as an
+        authority. It hallucinates, it can be injected, it fails non-deterministically. Money needs an
+        answer defensible to a regulator, not a plausible paragraph. So the two are split: the model
+        produces an <em>opinion</em>; deterministic Python owns every <em>decision</em>.
+      </p>
+      <div class="split">
+        <div><b>The model</b><span>Reads the message. Returns a risk score, a confidence, a plain reason. That is all it can do.</span></div>
+        <div><b>The code</b><span>Reads the facts, applies the rules, decides. One guarded writer owns every state change.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== how it works ===== -->
+  <section class="blk">
+    <div class="head">
+      <h2>How it works</h2>
+      <p>One triage chain, six stages. Five gather facts or an opinion. One decides. One moves money &mdash; and it is the only function in the system that can.</p>
+    </div>
+    <div class="pipe">
+      <div class="step"><span class="tag t-fact">Facts</span><span class="txt"><b>Read the transaction.</b> <code>get_transaction_context()</code> &mdash; who, how much, to whom.</span></div>
+      <div class="step"><span class="tag t-fact">Facts</span><span class="txt"><b>Check known scam links.</b> <code>check_scam_link()</code> &mdash; free, and runs first.</span></div>
+      <div class="step"><span class="tag t-opin">Opinion</span><span class="txt"><b>The model reads the message.</b> Risk score, confidence, a plain-English reason. <em>Never a decision.</em></span></div>
+      <div class="step"><span class="tag t-fact">Facts</span><span class="txt"><b>Verify the recipient.</b> <code>verify_campus_recipient()</code> &mdash; verified vendor, or a two-day-old account?</span></div>
+      <div class="step"><span class="tag t-dec">Decision</span><span class="txt"><b>The guard decides.</b> A pure function, first rule wins, every threshold read from policy.</span></div>
+      <div class="step"><span class="tag t-money">Money</span><span class="txt"><b>One writer changes state.</b> <code>update_payment_state()</code> &mdash; the only legal path to a wallet.</span></div>
+    </div>
+  </section>
+
+  <!-- ===== invariants ===== -->
+  <section class="blk">
+    <div class="head">
+      <h2>What the design guarantees</h2>
+      <p>Each of these is enforced by structure, not by care.</p>
+    </div>
+    <div class="inv">
+      <div class="c"><b>No permanent freeze</b><p>There is no <code>BLOCK</code> state. The schema cannot express one. Worst reachable state is &ldquo;waiting on a person&rdquo;.</p></div>
+      <div class="c"><b>One writer</b><p><code>update_payment_state()</code> is the only function that mutates a wallet, and it rejects illegal transitions outright.</p></div>
+      <div class="c"><b>Degrades, never fails</b><p>Model down, model unsure, directory hanging &mdash; all modelled states with defined behaviour. The wallet stays open.</p></div>
+      <div class="c"><b>No unbounded loop</b><p>Nothing polls. A payment awaiting a human is never re-processed. At most one model call per payment.</p></div>
+    </div>
+  </section>
+
+  <!-- ===== footer ===== -->
+  <footer>
+    <div class="who"><b>Venator</b> &mdash; an autonomous payment-triage agent for a campus wallet.<br>TechX Dubai &rsquo;26 &middot; High School track &middot; Domain 1.</div>
+    <a class="btn ghost" href="/login">Sign in</a>
+  </footer>
+
+</div>
+</body>
+</html>

@@ -23,10 +23,33 @@ PORT = int(os.environ.get("VENATOR_PORT", 8401))
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _FRONTEND = os.path.join(_HERE, "frontend.html")
 
+# Static HTML pages served by path. Each is read from disk on request (like the
+# shell) so markup stays editable without a restart. The theme marker is
+# substituted into every page, so all four share one design system.
+_PAGES = {
+    "/": "gate.html",
+    "/login": "login.html",
+    "/wallet": "wallet.html",
+    "/app": "frontend.html",
+    "/index.html": "frontend.html",
+}
 
-def _page():
-    """The app shell, read from disk so the markup stays editable on its own."""
-    with open(_FRONTEND, encoding="utf-8") as fh:
+
+def _page(name=None):
+    """One HTML page with the shared theme substituted in.
+
+    `name` is a filename inside the package (e.g. "login.html"); it defaults to
+    the console shell. The name is matched against a fixed registry, never used
+    to build a path from user input, so a made-up page name cannot escape the
+    package directory.
+    """
+    if name is None:
+        path = _FRONTEND
+    else:
+        path = os.path.join(_HERE, name)
+        if not os.path.abspath(path).startswith(_HERE + os.sep):
+            path = _FRONTEND
+    with open(path, encoding="utf-8") as fh:
         return fh.read().replace("<!--THEME-->", THEME)
 
 
@@ -59,9 +82,11 @@ class Handler(BaseHTTPRequestHandler):
 
     def _dispatch(self, method):
         u = urlparse(self.path)
-        if u.path in ("/", "/index.html"):
+        # Strip a trailing slash so /login and /login/ are the same page.
+        page = u.path.rstrip("/") or "/"
+        if page in _PAGES:
             try:
-                return self._bytes(_page().encode(), "text/html; charset=utf-8")
+                return self._bytes(_page(_PAGES[page]).encode(), "text/html; charset=utf-8")
             except OSError as e:
                 return self._json({"error": f"front end not found: {e}"}, 500)
         if u.path == "/favicon.ico":

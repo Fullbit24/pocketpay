@@ -100,6 +100,23 @@ def decide(ctx, analysis, recipient, scam_link_hit=None, tool_failed=False,
     if state.get("split_total"):
         return HOLD, "R1f_split_payment", state["split_total"]
 
+    # ---- R1g: too many transfers from one student, too fast --------------
+    if state.get("velocity_burst"):
+        return HOLD, "R1g_velocity_burst", state["velocity_burst"]
+
+    # ---- R1h: one sender spreading a sum across many recipients ----------
+    if state.get("structuring_fanout"):
+        return HOLD, "R1h_structuring_fanout", state["structuring_fanout"]
+
+    # ---- R1i: the model read the account's trajectory and flagged drift ---
+    # The model's pattern answer is an OPINION. It only tightens here, and only
+    # when it clears the configured score and the model was sure enough.
+    drift = state.get("pattern_drift")
+    if drift and drift.get("drift_score", 0) >= p["pattern_drift.drift_hold_at"] \
+            and drift.get("confidence", 0.0) >= p["pattern_drift.min_confidence"]:
+        return HOLD, "R1i_pattern_drift", drift.get("reason") or \
+            "the account's payment history is drifting toward fraud"
+
     # ---- R1c: a hard fact plus a confident opinion ------------------------
     if tier == "unverified" and risk >= p["risk.high"]:
         return ESCALATE, "R1c_unverified_high_risk", \

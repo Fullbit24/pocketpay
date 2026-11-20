@@ -88,6 +88,59 @@ split_payment:
   min_counted_amount: 24
 
 # ---------------------------------------------------------------------------
+# HS-1.1b  Structuring / fan-out
+# ---------------------------------------------------------------------------
+# R1f watches one sender -> recipient pair. A fraudster who splits a sum across
+# MANY recipients slips past it, because no single pair crosses the threshold.
+# This rule watches the SENDER across all recipients.
+structuring:
+  enabled: true
+  # Rolling window for the sender's total spend across every recipient.
+  window_minutes: 60
+  # If the sender's rolling total reaches this, and they have paid at least
+  # min_distinct_recipients different accounts, the next transfer holds.
+  trigger_total: 300
+  # The sender must have paid at least this many DISTINCT recipients inside the
+  # window for a spread to count as structuring rather than normal spending.
+  min_distinct_recipients: 4
+  # Transfers below this are ignored, so ordinary canteen-size spending never
+  # accumulates toward a hold.
+  min_counted_amount: 24
+
+# ---------------------------------------------------------------------------
+# HS-1.1  Payment velocity burst
+# ---------------------------------------------------------------------------
+velocity_burst:
+  enabled: true
+  # Rolling window for a single sender, in seconds.
+  window_seconds: 600        # 10 minutes
+  # This many counted transfers inside the window...
+  trigger_count: 8           # this many counted transfers inside the window...
+  # ...AND at least this much sent, holds the next one.
+  trigger_total: 150         # ...AND at least this much sent, holds the next one
+  # Transfers of at least this size count toward the burst. Smaller canteen-style
+  # payments are ignored so normal small spending is not punished.
+  min_counted_amount: 24     # transfers below this are ignored (canteen spending)
+
+# ---------------------------------------------------------------------------
+# HS-1.6  Pattern drift (model-assisted, opinion only)
+# ---------------------------------------------------------------------------
+# The other history rules count hard numbers (totals, counts, recipients). This
+# one is different: it lets the MODEL read a student's whole payment history -
+# including the decisions already made on it - and form an opinion about the
+# account's TRAJECTORY. It is still only an opinion. The guard below turns it
+# into an action, and only when the drift score clears the threshold. A pattern
+# opinion can never clear a payment; it can only tighten one.
+pattern_drift:
+  enabled: true
+  # How many of the student's most recent payments the model reads.
+  history_limit: 25
+  # A drift score at or above this holds the next payment for a human.
+  drift_hold_at: 70
+  # Do not act on a pattern the model was unsure about.
+  min_confidence: 0.6
+
+# ---------------------------------------------------------------------------
 # HS-1.2  Lookalike vendor
 # ---------------------------------------------------------------------------
 lookalike:
@@ -305,6 +358,9 @@ rules:
   - low_confidence         # R2b
   - missing_risk           # R2c
   - split_payment          # R1f
+  - velocity_burst         # R1g
+  - structuring_fanout     # R1h
+  - pattern_drift          # R1i
   - unverified_high_risk   # R1c
   - directory_outage       # R3
   - high_risk              # R4

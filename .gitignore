@@ -2,3 +2,5 @@
 __pycache__/
 sessions/
 campus_wallet_logs.sqlite
+.~lock.*#
+*.pptx~

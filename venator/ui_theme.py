@@ -67,7 +67,7 @@ body{background:var(--page);color:var(--ink);font:15px/1.55 'Barlow',ui-sans-ser
 .who{font-size:12.5px;color:var(--ink-2);text-align:right;line-height:1.3}
 .who b{display:block;font-size:13.5px;color:var(--ink)}
 
-.shell{flex:1;display:flex;min-height:0;flex-wrap:wrap}
+.shell{flex:1;display:flex;min-height:0;flex-wrap:nowrap}
 
 /* ---------- sidebar ---------- */
 .side{flex:0 0 248px;min-width:0;padding:18px 14px 16px;background:var(--steel);
@@ -266,6 +266,7 @@ textarea{min-height:84px;resize:vertical;line-height:1.5}
 
 /* ---------- responsive ---------- */
 @media(max-width:1000px){
+  .shell{flex-wrap:wrap;align-content:flex-start}
   .side{flex:1 1 100%;border-right:0;border-bottom:1px solid var(--steel-line)}
   .main{flex:1 1 100%;padding:18px 16px 24px}
   .brandsub{display:none}

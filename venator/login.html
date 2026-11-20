@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign in — Venator</title>
+<!--THEME-->
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--page);color:var(--ink);
+  font:16px/1.55 'Barlow',ui-sans-serif,system-ui,sans-serif;
+  display:flex;flex-direction:column;-webkit-font-smoothing:antialiased}
+.loginwrap{flex:1;display:flex;align-items:center;justify-content:center;padding:40px 22px}
+.card{width:100%;max-width:430px;background:var(--panel);border:1px solid var(--panel-line);
+  border-radius:16px;padding:38px 36px 34px;box-shadow:inset 0 1px 0 #fff,0 10px 40px rgba(31,41,51,.12)}
+.brandrow{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+.wm{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:28px;letter-spacing:.3em;
+  padding-left:.3em;text-transform:uppercase;color:var(--mark)}
+h1{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:30px;text-transform:uppercase;
+  color:var(--mark);margin-top:20px;line-height:1}
+.sub{font-size:14.5px;color:var(--ink-2);margin-top:9px}
+label{display:block;font:600 12px 'Barlow',sans-serif;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--ink-3);margin:24px 0 7px}
+input{width:100%;min-height:50px;padding:10px 14px;font:16px 'Barlow',sans-serif;
+  border:1px solid var(--panel-line);border-radius:9px;background:#FBFCFD;color:var(--ink)}
+input:focus{outline:2px solid var(--teal);outline-offset:1px;background:#fff}
+.btn{width:100%;min-height:52px;margin-top:20px;border-radius:9px;cursor:pointer;
+  font:600 16px 'Barlow',sans-serif;border:1px solid var(--amber-line);
+  background:linear-gradient(180deg,#FFC833,var(--amber));color:#3A2B00;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.55);transition:transform .08s}
+.btn:hover{filter:brightness(1.04)}
+.btn:active{transform:translateY(1px)}
+.err{margin-top:16px;padding:11px 13px;border-radius:8px;background:var(--hi-bg);
+  color:var(--hi-tx);font-size:14px;display:none}
+.err.on{display:block}
+.hint{margin-top:26px;padding-top:20px;border-top:1px solid var(--hair);font-size:13.5px;color:var(--ink-3)}
+.hint b{color:var(--ink-2)}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
+.chip{font:600 13px 'Barlow',sans-serif;padding:7px 13px;border-radius:999px;cursor:pointer;
+  border:1px solid var(--panel-line);background:#F4F6F8;color:var(--ink)}
+.chip:hover{background:#EAEEF2}
+.back{margin-top:22px;text-align:center;font-size:13.5px}
+.back a{color:var(--teal);text-decoration:none;border-bottom:1px solid transparent}
+.back a:hover{border-bottom-color:var(--teal)}
+.busy{opacity:.6;pointer-events:none}
+</style>
+</head>
+<body>
+<div class="loginwrap">
+  <div class="card">
+    <div class="brandrow">
+      <svg width="32" height="32" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+        <path d="M18 2L32 10V26L18 34L4 26V10Z" stroke="#2F3A45" stroke-width="1.5"/>
+        <path d="M12 12.5h8.5a5.5 5.5 0 0 1 0 11H12Z" stroke="#2F3A45" stroke-width="2.2" stroke-linejoin="round"/>
+        <circle cx="18.5" cy="18" r="2" fill="#F2A900"/>
+      </svg>
+      <span class="wm">Venator</span>
+    </div>
+
+    <h1>Sign in</h1>
+    <p class="sub">Enter your username. No password — this is a demonstration build.</p>
+
+    <form id="f" autocomplete="off">
+      <label for="u">Username</label>
+      <input id="u" name="u" placeholder="e.g. rayan, maya, admin" autofocus spellcheck="false">
+      <button class="btn" type="submit" id="go">Continue</button>
+      <div class="err" id="err"></div>
+    </form>
+
+    <div class="hint">
+      <b>Demo accounts</b> — tap to fill:
+      <div class="chips">
+        <button class="chip" data-fill="rayan">rayan <span style="color:var(--ink-3)">· student</span></button>
+        <button class="chip" data-fill="maya">maya <span style="color:var(--ink-3)">· student</span></button>
+        <button class="chip" data-fill="admin">admin <span style="color:var(--ink-3)">· operator</span></button>
+      </div>
+    </div>
+
+    <div class="back"><a href="/">&larr; Back to the Venator overview</a></div>
+  </div>
+</div>
+
+<script>
+  var $ = function (s) { return document.querySelector(s); };
+  var u = $("#u"), err = $("#err"), go = $("#go"), f = $("#f");
+
+  document.querySelectorAll("[data-fill]").forEach(function (c) {
+    c.addEventListener("click", function () { u.value = c.getAttribute("data-fill"); u.focus(); });
+  });
+
+  f.addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var name = (u.value || "").trim();
+    if (!name) { err.textContent = "Enter a username."; err.classList.add("on"); return; }
+    err.classList.remove("on");
+    go.textContent = "Signing in…"; go.classList.add("busy");
+    fetch("/api/v1/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: name })
+    }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+      .then(function (res) {
+        if (!res.ok || !res.d.user_id) {
+          err.textContent = res.d.error || "Could not sign in.";
+          err.classList.add("on");
+          go.textContent = "Continue"; go.classList.remove("busy");
+          return;
+        }
+        var identity = res.d.user_id + ":" + res.d.token;
+        try { localStorage.setItem("venator.identity", identity);
+              localStorage.setItem("venator.user", JSON.stringify(res.d.user)); } catch (e) {}
+        var role = (res.d.user && res.d.user.role) || "";
+        var dest = (role === "admin" || role === "staff") ? "/app#overview" : "/wallet";
+        location.href = dest;
+      })
+      .catch(function () {
+        err.textContent = "Network error — is the server running?";
+        err.classList.add("on");
+        go.textContent = "Continue"; go.classList.remove("busy");
+      });
+  });
+</script>
+</body>
+</html>

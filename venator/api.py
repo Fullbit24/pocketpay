@@ -433,6 +433,52 @@ def post_cancel_window(con, tid, action):
     return {"txn_id": tid, "state": state, "detail": reason}, None
 
 
+def login(con, username):
+    """Resolve a bare username to a live identity, for the demo login.
+
+    This is a demonstration convenience, not authentication in any real sense:
+    it maps a short handle to an existing seeded account and returns the
+    (user_id, token) pair the API already uses. `admin` is always accepted and
+    resolves to the seeded administrator regardless of case. No password, no
+    session, no secret is created here.
+
+    Returns (payload, error).
+    """
+    handle = (username or "").strip().lower()
+    if not handle:
+        return None, "enter a username"
+
+    # admin is hardcoded (lowercase) to the seeded administrator account.
+    if handle == "admin":
+        handle = "system administrator"
+
+    # Match on user_id (U-RAYAN), the display name, or the linked student name
+    # (Rayan), so "rayan" and "U-RAYAN" both land on the same account.
+    rows = users.list_users(con)
+    chosen = None
+    for u in rows:
+        cands = {
+            str(u.get("user_id") or "").lower(),
+            str(u.get("display_name") or "").lower(),
+            str(u.get("student_name") or "").lower(),
+        }
+        if handle in cands:
+            chosen = u
+            break
+    if chosen is None:
+        return None, f"no account named '{username.strip()}'"
+
+    full = users.get_user(con, chosen["user_id"])
+    if full is None or not full.get("active"):
+        return None, "that account is not active"
+
+    return {
+        "user_id": full["user_id"],
+        "token": full.get("api_token") or "",
+        "user": users.public(full),
+    }, None
+
+
 def post_report(con, message, student="You", recipient_id="R-GHOST", amount=100.0, age=17):
     """Triage an arbitrary incoming message through the real chain.
 
@@ -768,6 +814,9 @@ def dispatch(con, method, path, query=None, body=None, headers=None):
                     out, err = post_cancel_window(con, tid, body.get("action", ""))
                     return (out, 200) if out else ({"error": err}, 404)
                 return {"error": f"no such action on a transaction: {action}"}, 404
+            if p == "/login":
+                out, err = login(con, body.get("username"))
+                return (out, 200) if out else ({"error": err}, 401)
             if p == "/report":
                 if not actor.can("triage"):
                     return _forbidden("triage")

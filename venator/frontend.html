@@ -176,9 +176,10 @@
       <div class="kpi"><i>Escalated</i><b id="kpiEscalated">--</b></div>
       <div class="kpi"><i>Cleared</i><b id="kpiCleared">--</b></div>
       <div class="who">
-        <b>Operations desk</b>
+        <b id="whoName">Operations desk</b>
         <span id="whoRole">Signed in &middot; reviewer</span>
       </div>
+      <a class="btn sm" href="/login" id="signOut" style="text-decoration:none">Sign out</a>
     </div>
   </header>
 
@@ -206,6 +207,7 @@
         <div class="navwrap" id="nav-operations">
           <button class="nav" data-page="overview">Overview</button>
           <button class="nav" data-page="queue">Queue</button>
+          <button class="nav" data-page="submit">Submit payment</button>
           <button class="nav" data-page="runs">Agent runs</button>
           <button class="nav" data-page="escalations">Escalations</button>
         </div>
@@ -229,6 +231,10 @@
         <div class="sysstat">
           <em><span class="pip" id="healthPip" aria-hidden="true"></span><span id="healthText">Connecting to the API&hellip;</span></em>
           <span id="healthSub">Policy version loaded at start.</span>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <a class="nav" href="/wallet" style="flex:1;justify-content:center;text-decoration:none">My wallet</a>
+          <a class="nav" href="/" style="flex:1;justify-content:center;text-decoration:none">Overview</a>
         </div>
       </div>
     </nav>
@@ -353,6 +359,58 @@
             </table>
           </div>
         </section>
+      </section>
+
+      <!-- ===================== SUBMIT PAYMENT ===================== -->
+      <section class="pagebody" id="page-submit" aria-labelledby="sTitle" hidden>
+        <div class="head">
+          <div>
+            <div class="crumb">Operations / Submit payment</div>
+            <h1 id="sTitle">Submit a payment</h1>
+            <p>Hand the system a real incoming payment. It is triaged <em>automatically</em> the moment it arrives &mdash; no button, no queue worker, one model call. The verdict below is what the agent decided on its own.</p>
+          </div>
+        </div>
+
+        <div id="sNotice"></div>
+
+        <div class="cols">
+          <div class="stack colmain">
+            <section class="card">
+              <h2 class="cardhead">New payment</h2>
+              <div class="pad">
+                <label class="label" for="sMsg" style="display:block;margin-bottom:6px">Message that came with it</label>
+                <textarea id="sMsg" style="min-height:92px" placeholder="e.g. Selling my Front Row Fest pass 50 AED, send fast, click here to claim: venator-claims.top/tix"></textarea>
+
+                <div class="toolbar" style="border-bottom:0;padding-bottom:0">
+                  <label class="quiet" for="sStudent" style="font-weight:600">Student</label>
+                  <input id="sStudent" value="Zayd" style="min-height:40px;padding:7px 12px;width:130px" aria-label="Student name">
+                  <label class="quiet" for="sRcp" style="font-weight:600">Recipient</label>
+                  <input id="sRcp" value="R-TIX99" style="min-height:40px;padding:7px 12px;width:130px" aria-label="Recipient id">
+                  <label class="quiet" for="sAmt" style="font-weight:600">Amount</label>
+                  <input id="sAmt" type="number" value="50" min="0" step="0.01" style="min-height:40px;padding:7px 12px;width:110px" aria-label="Amount AED">
+                  <button class="btn go" id="sGo" type="button">Ingest &amp; triage</button>
+                </div>
+
+                <div id="sVerdict" style="margin-top:18px"></div>
+              </div>
+            </section>
+          </div>
+
+          <div class="stack colside">
+            <section class="card">
+              <h2 class="cardhead">What happens</h2>
+              <div class="pad">
+                <div class="tl">
+                  <div class="tlrow"><span class="dot a-tool"></span><span class="actor tx-tool">1</span><span>Facts are read &mdash; transaction, link, recipient.</span></div>
+                  <div class="tlrow"><span class="dot a-llm"></span><span class="actor tx-llm">2</span><span>The model reads the message. Opinion only.</span></div>
+                  <div class="tlrow"><span class="dot a-guard"></span><span class="actor tx-guard">3</span><span>The guard decides. Rules fire, first match wins.</span></div>
+                  <div class="tlrow"><span class="dot a-system"></span><span class="actor tx-system">4</span><span>State is written. One writer, and it validates.</span></div>
+                </div>
+                <p class="quiet" style="margin-top:12px;font-size:13px">This runs once, on arrival. Submitting the same thing again is a new payment, not a re-run.</p>
+              </div>
+            </section>
+          </div>
+        </div>
       </section>
 
       <!-- ===================== AGENT RUNS ===================== -->
@@ -663,8 +721,15 @@
   }
 
   // fetch wrapper: always JSON, raises a plain message on any failure
+  // The signed-in identity (set at /login) is attached to every request so the
+  // console sees the same scoped data the API would give that role directly.
+  function identity() {
+    try { return localStorage.getItem("venator.identity") || ""; } catch (e) { return ""; }
+  }
   function api(method, path, body) {
     var opts = { method: method, headers: { "Accept": "application/json" }, cache: "no-store" };
+    var id = identity();
+    if (id) opts.headers["X-Venator-User"] = id;
     if (body !== undefined) {
       opts.headers["Content-Type"] = "application/json";
       opts.body = JSON.stringify(body);
@@ -701,6 +766,7 @@
   var PAGES = {
     overview: { el: "page-overview", group: "operations", crumb: "Operations / Overview" },
     queue: { el: "page-queue", group: "operations", crumb: "Operations / Queue" },
+    submit: { el: "page-submit", group: "operations", crumb: "Operations / Submit payment" },
     runs: { el: "page-runs", group: "operations", crumb: "Operations / Agent runs" },
     escalations: { el: "page-escalations", group: "operations", crumb: "Operations / Escalations" },
     policy: { el: "page-policy", group: "governance", crumb: "Governance / Policy" },
@@ -851,7 +917,11 @@
       : "No policy version reported.";
     $("#footPolicy").textContent = (h && h.policy_version !== undefined) ? ("Policy v" + h.policy_version) : "Policy v\u2013";
     $("#pVersion").textContent = (h && h.policy_version !== undefined) ? ("Policy v" + h.policy_version) : "Policy v\u2013";
-    $("#whoRole").textContent = ok ? "Signed in \u00b7 reviewer" : "Signed in \u00b7 offline";
+    // Keep the signed-in role in the who-line; only flag connectivity here.
+    var meNow = null;
+    try { meNow = JSON.parse(localStorage.getItem("venator.user") || "null"); } catch (e) { meNow = null; }
+    var roleLabel = (meNow && meNow.role) ? meNow.role : "reviewer";
+    $("#whoRole").textContent = ok ? ("Signed in \u00b7 " + roleLabel) : "Signed in \u00b7 offline";
   }
 
   function refreshHealth(quiet) {
@@ -1552,6 +1622,7 @@
     if (!page) return Promise.resolve();
     if (page === "overview") return loadOverview();
     if (page === "queue") return loadQueue();
+    if (page === "submit") return Promise.resolve();
     if (page === "runs") return loadRuns();
     if (page === "escalations") return loadEscalations();
     if (page === "policy") return loadPolicy();
@@ -1562,7 +1633,61 @@
   // ------------------------------------------------------------------
   // boot
   // ------------------------------------------------------------------
+  // ------------------------------------------------------------------
+  // submit a payment — ingest and let the chain decide on arrival
+  // ------------------------------------------------------------------
+  var SUBMIT_LABEL = { CLEAR: "Clear", CLEARED: "Cleared",
+    PENDING_CONFIRMATION: "Pending confirmation", PENDING_GUARDIAN: "Pending guardian",
+    ESCALATED: "Escalated", RECEIVED: "Received" };
+  (function wireSubmit() {
+    var btn = $("#sGo");
+    if (!btn) return;
+    btn.addEventListener("click", function () {
+      var msg = ($("#sMsg").value || "").trim();
+      if (!msg) { notice($("#sNotice"), "bad", "Type the message that came with the payment."); return; }
+      btn.disabled = true; btn.textContent = "Triaging…";
+      $("#sVerdict").innerHTML = "";
+      api("POST", "/api/v1/report", {
+        message: msg,
+        student: ($("#sStudent").value || "You").trim(),
+        recipient_id: ($("#sRcp").value || "R-GHOST").trim(),
+        amount: Number($("#sAmt").value || 0),
+        age: 16
+      }).then(function (d) {
+        btn.disabled = false; btn.textContent = "Ingest & triage";
+        var act = d.action || "—";
+        var cls = act === "CLEAR" ? "c-lo" : (act === "ESCALATED" ? "c-hi" : "c-md");
+        $("#sVerdict").innerHTML =
+          '<div class="verdict" style="display:block">' +
+            "<b>" + esc(SUBMIT_LABEL[act] || act) + "</b>" +
+            '<span class="quiet" style="margin-left:10px">' + esc(d.txn_id || "") + "</span>" +
+            (d.rule ? '<div class="mono quiet" style="font-size:13px;margin-top:6px">rule: ' + esc(d.rule) + "</div>" : "") +
+            '<div style="margin-top:8px">' + esc(d.explanation || "") + "</div>" +
+          "</div>";
+        notice($("#sNotice"), "ok", (d.txn_id || "The payment") + " decided itself on arrival — no button was needed.");
+        // refresh the queue + overview so the new payment shows up everywhere
+        fetchTransactions().catch(function () {});
+        loadOverview().catch(function () {});
+      }).catch(function (err) {
+        btn.disabled = false; btn.textContent = "Ingest & triage";
+        notice($("#sNotice"), "bad", err.message || "Could not submit the payment.");
+      });
+    });
+  })();
+
   function boot() {
+    // Reflect the signed-in identity in the top bar. If nobody is signed in,
+    // send them to the login page — the console is the operator surface.
+    var me = null;
+    try { me = JSON.parse(localStorage.getItem("venator.user") || "null"); } catch (e) { me = null; }
+    if (!identity()) { location.replace("/login"); return; }
+    if (me) {
+      var wn = $("#whoName"); if (wn) wn.textContent = me.display_name || "Operations desk";
+      var wr = $("#whoRole"); if (wr) wr.textContent = "Signed in · " + (me.role || "reviewer");
+    }
+    var so = $("#signOut");
+    if (so) so.addEventListener("click", function () { try { localStorage.clear(); } catch (e) {} });
+
     buildSuggestions();
     refreshHealth(true).then(function () {
       // prime the top KPI strip and footer count from live stats

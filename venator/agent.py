@@ -163,6 +163,54 @@ class VenatorAgent:
             db.log_decision(con, txn_id, "tool", "rolling_total_skipped",
                             f"{type(e).__name__}: {e}")
 
+        # 1e. too many transfers from one student, too fast (a burst)
+        try:
+            from .rules import velocity_burst as _vel
+            hit = _vel.evaluate(con, ctx, analysis=None, recipient=None, state=checks)
+            if hit:
+                checks["velocity_burst"] = hit[2]
+                db.log_decision(con, txn_id, "tool", "velocity_burst",
+                                f"payment rate crossed the policy threshold - {hit[2]}")
+        except Exception as e:
+            db.log_decision(con, txn_id, "tool", "velocity_burst_skipped",
+                            f"{type(e).__name__}: {e}")
+
+        # 1f. one sender spreading a sum across many recipients (structuring)
+        try:
+            from .rules import structuring_fanout as _fan
+            hit = _fan.evaluate(con, ctx, analysis=None, recipient=None, state=checks)
+            if hit:
+                checks["structuring_fanout"] = hit[2]
+                db.log_decision(con, txn_id, "tool", "structuring_fanout",
+                                f"sender spread crossed the policy threshold - {hit[2]}")
+        except Exception as e:
+            db.log_decision(con, txn_id, "tool", "structuring_fanout_skipped",
+                            f"{type(e).__name__}: {e}")
+
+        # 1g. the model reads the whole account trajectory and returns an OPINION.
+        # This is the only history check that uses the brain; like every other
+        # model call it cannot decide anything, it only feeds the guard a score.
+        try:
+            from . import pattern as _pattern
+            opinion = _pattern.analyze_pattern(con, ctx.get("student"), llm=self.llm)
+            if opinion:
+                checks["pattern_drift"] = {
+                    "drift_score": opinion["drift_score"],
+                    "confidence": opinion["confidence"],
+                    "direction": opinion.get("direction"),
+                    "signals": opinion.get("signals") or [],
+                    "reason": opinion.get("explanation") or "",
+                }
+                db.log_decision(con, txn_id, "llm", "analyze_pattern",
+                                f"drift={opinion['drift_score']}/100 "
+                                f"dir={opinion.get('direction')} "
+                                f"conf={opinion['confidence']:.2f} "
+                                f"signals={opinion.get('signals') or 'none'} :: "
+                                f"{opinion.get('explanation') or ''}")
+        except Exception as e:
+            db.log_decision(con, txn_id, "llm", "analyze_pattern_skipped",
+                            f"{type(e).__name__}: {e}")
+
         # 2. brain (opinion only - it cannot block anyone)
         analysis = self._analyze({**ctx, "message": clean_message})
         if analysis:

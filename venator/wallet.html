@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My wallet — Venator</title>
+<!--THEME-->
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--page);color:var(--ink);
+  font:15.5px/1.55 'Barlow',ui-sans-serif,system-ui,sans-serif;
+  font-variant-numeric:tabular-nums;display:flex;flex-direction:column;overflow:hidden}
+.cond{font-family:'Barlow Condensed',sans-serif;font-weight:700;text-transform:uppercase}
+
+/* top bar */
+.topbar{display:flex;align-items:center;gap:18px;min-height:64px;padding:0 22px;flex:none;
+  background:var(--steel);border-bottom:1px solid var(--steel-line);box-shadow:inset 0 1px 0 var(--steel-hi)}
+.topbar .brand{display:flex;align-items:center;gap:10px}
+.wm{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:22px;letter-spacing:.28em;
+  padding-left:.28em;text-transform:uppercase;color:var(--mark)}
+.topbar .sp{flex:1}
+.who{text-align:right;font-size:12.5px;color:var(--ink-2);line-height:1.3}
+.who b{display:block;font-size:14px;color:var(--ink)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  font:600 14.5px 'Barlow',sans-serif;min-height:42px;padding:0 18px;border-radius:8px;cursor:pointer;
+  text-decoration:none;border:1px solid var(--panel-line);background:var(--metal);color:var(--ink);
+  box-shadow:inset 0 1px 0 #fff;transition:filter .1s}
+.btn:hover{filter:brightness(1.03)}
+.btn.primary{background:linear-gradient(180deg,#FFC833,var(--amber));border-color:var(--amber-line);color:#3A2B00}
+.btn.ghost{background:rgba(255,255,255,.55)}
+
+/* layout */
+.shell{flex:1;display:flex;min-height:0;flex-wrap:nowrap}
+.side{flex:0 0 232px;background:var(--steel);border-right:1px solid var(--steel-line);
+  padding:18px 14px;display:flex;flex-direction:column;gap:4px;overflow-y:auto}
+.nav{width:100%;display:flex;align-items:center;gap:9px;min-height:44px;padding:0 12px;border-radius:8px;
+  cursor:pointer;border:1px solid transparent;background:transparent;color:var(--ink);
+  font:600 14.5px 'Barlow',sans-serif;text-align:left}
+.nav:hover{background:rgba(255,255,255,.55)}
+.nav[aria-current="page"]{background:#fff;border-color:var(--panel-line);box-shadow:inset 3px 0 0 var(--amber)}
+.sidefoot{margin-top:auto;padding-top:14px;font-size:12.5px;color:var(--ink-2);font-weight:500;line-height:1.45}
+.main{flex:1;min-width:0;overflow-y:auto;padding:24px 28px 40px}
+
+/* balance */
+.balhero{background:var(--panel);border:1px solid var(--panel-line);border-radius:14px;
+  padding:26px 28px;box-shadow:inset 0 1px 0 #fff;display:flex;gap:26px;flex-wrap:wrap;align-items:flex-end}
+.balhero .amt{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:52px;line-height:1;color:var(--mark)}
+.balhero .amt small{font-size:24px;color:var(--ink-3);margin-left:6px}
+.balhero .lbl{font:600 12px 'Barlow',sans-serif;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+.kpirow{display:flex;gap:22px;flex-wrap:wrap;margin-left:auto}
+.kpi{min-width:88px}
+.kpi b{display:block;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:27px;line-height:1.05}
+.kpi i{font-style:normal;font:600 11px 'Barlow',sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+
+h2{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:23px;text-transform:uppercase;
+  color:var(--mark);margin:30px 0 14px;display:flex;align-items:center;gap:10px}
+h2 .r{font-family:'Barlow',sans-serif;font-size:12.5px;color:var(--ink-3);letter-spacing:.02em;text-transform:none;font-weight:500}
+
+/* card + table */
+.card{background:var(--panel);border:1px solid var(--panel-line);border-radius:12px;
+  overflow:hidden;box-shadow:inset 0 1px 0 #fff}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font:600 11.5px 'Barlow',sans-serif;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ink-3);padding:11px 16px;border-bottom:1px solid var(--panel-line);background:#F7F9FA}
+td{padding:13px 16px;border-bottom:1px solid var(--hair);vertical-align:middle;font-size:14.5px}
+tr:last-child td{border-bottom:0}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:#EEF1F4}
+.idlink{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;font-weight:600;
+  color:var(--teal);text-decoration:none;border-bottom:1px solid transparent}
+.idlink:hover{border-bottom-color:var(--teal)}
+.num{text-align:right;font-weight:600;white-space:nowrap}
+.chip{display:inline-block;font:600 12.5px 'Barlow',sans-serif;padding:3px 11px;border-radius:999px;white-space:nowrap}
+.s-CLEAR{background:var(--lo-bg);color:var(--lo-tx)}
+.s-RECEIVED,.s-TRIAGED{background:var(--nu-bg);color:var(--nu-tx)}
+.s-PENDING_CONFIRMATION,.s-PENDING_GUARDIAN{background:var(--md-bg);color:var(--md-tx)}
+.s-ESCALATED{background:var(--hi-bg);color:var(--hi-tx)}
+.s-CLEARED{background:var(--lo-bg);color:var(--lo-tx)}
+.s-CANCELLED,.s-CONFIRMED_CANCELLABLE{background:var(--nu-bg);color:var(--nu-tx)}
+.empty{padding:26px 18px;color:var(--ink-3);font-size:14.5px}
+
+/* submit box */
+.box{background:var(--panel);border:1px solid var(--panel-line);border-radius:12px;padding:20px 22px;
+  box-shadow:inset 0 1px 0 #fff}
+.box p.hint{font-size:13.5px;color:var(--ink-3);margin-bottom:12px}
+textarea{width:100%;min-height:78px;padding:11px 13px;font:15px 'Barlow',sans-serif;line-height:1.5;
+  border:1px solid var(--panel-line);border-radius:9px;background:#FBFCFD;color:var(--ink);resize:vertical}
+textarea:focus{outline:2px solid var(--teal);outline-offset:1px;background:#fff}
+.row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-top:12px}
+.row .f{display:flex;flex-direction:column;gap:5px}
+.row label{font:600 11px 'Barlow',sans-serif;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3)}
+.row input{min-height:42px;padding:8px 12px;border:1px solid var(--panel-line);border-radius:8px;
+  font:15px 'Barlow',sans-serif;background:#FBFCFD;color:var(--ink);width:130px}
+.verdict{margin-top:16px;border-radius:10px;padding:16px 18px;display:none}
+.verdict.on{display:block}
+.verdict .v{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:26px;text-transform:uppercase;line-height:1}
+.verdict .rule{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;margin-top:4px;opacity:.85}
+.verdict .why{font-size:14.5px;margin-top:9px;line-height:1.5}
+.v-CLEAR{background:var(--lo-bg);color:var(--lo-tx)}
+.v-PENDING_CONFIRMATION,.v-PENDING_GUARDIAN{background:var(--md-bg);color:var(--md-tx)}
+.v-ESCALATED{background:var(--hi-bg);color:var(--hi-tx)}
+.busy{opacity:.55;pointer-events:none}
+.err{color:var(--hi-tx);font-size:14px;margin-top:10px}
+
+@media(max-width:900px){
+  .side{flex:0 0 60px}
+  .nav span.t{display:none}
+  .balhero .amt{font-size:42px}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <svg width="30" height="30" viewBox="0 0 36 36" fill="none" aria-hidden="true">
+      <path d="M18 2L32 10V26L18 34L4 26V10Z" stroke="#2F3A45" stroke-width="1.5"/>
+      <path d="M12 12.5h8.5a5.5 5.5 0 0 1 0 11H12Z" stroke="#2F3A45" stroke-width="2.2" stroke-linejoin="round"/>
+      <circle cx="18.5" cy="18" r="2" fill="#F2A900"/>
+    </svg>
+    <span class="wm">Venator</span>
+  </div>
+  <span class="sp"></span>
+  <div class="who"><b id="whoName">…</b><span id="whoRole">student</span></div>
+  <a class="btn ghost" href="/">Overview</a>
+  <a class="btn" href="/login" id="logout">Sign out</a>
+</header>
+
+<div class="shell">
+  <nav class="side">
+    <button class="nav" aria-current="page" data-go="wallet"><span class="t">My wallet</span></button>
+    <button class="nav" data-go="submit"><span class="t">Check a payment</span></button>
+    <button class="nav" data-go="alerts"><span class="t">Campus alerts</span></button>
+    <div class="sidefoot">Venator &middot; campus wallet<br>model reads &middot; code decides</div>
+  </nav>
+
+  <main class="main">
+
+    <!-- balance hero -->
+    <div class="balhero">
+      <div>
+        <div class="lbl">Wallet balance</div>
+        <div class="amt" id="bal">—<small>AED</small></div>
+      </div>
+      <div class="kpirow">
+        <div class="kpi"><b id="kTotal">—</b><i id="kTotalLbl">Payments</i></div>
+        <div class="kpi"><b id="kClear">—</b><i>Cleared</i></div>
+        <div class="kpi"><b id="kHold">—</b><i>Awaiting you</i></div>
+        <div class="kpi"><b id="kEsc">—</b><i>Escalated</i></div>
+      </div>
+    </div>
+
+    <!-- payments -->
+    <h2 id="payHead">Your payments <span class="r" id="payCount"></span></h2>
+    <div class="card">
+      <table>
+        <thead><tr><th>ID</th><th>To</th><th>Purpose</th><th style="text-align:right">Amount (AED)</th><th>Verdict</th><th>Checked by</th></tr></thead>
+        <tbody id="rows"><tr><td colspan="6" class="empty">Loading your payments…</td></tr></tbody>
+      </table>
+    </div>
+
+    <!-- live submit -->
+    <h2 id="submitHead">Check a payment before you send <span class="r">runs the real Venator chain on your message</span></h2>
+    <div class="box">
+      <p class="hint">Paste the message someone sent you and the amount. Venator reads it and tells you if it is safe &mdash; before any money moves.</p>
+      <textarea id="msg" placeholder="e.g. Selling my Front Row Fest pass 50 AED, send fast, click here to claim: venator-claims.top/tix"></textarea>
+      <div class="row">
+        <div class="f"><label for="amt">Amount (AED)</label><input id="amt" type="number" value="50" min="0" step="0.01"></div>
+        <div class="f"><label for="rcp">Paying whom</label><input id="rcp" type="text" value="R-TIX99" style="width:170px"></div>
+        <button class="btn primary" id="checkBtn" type="button">Check this payment</button>
+      </div>
+      <div class="err" id="subErr"></div>
+      <div class="verdict" id="verdict">
+        <div class="v" id="vAction"></div>
+        <div class="rule" id="vRule"></div>
+        <div class="why" id="vWhy"></div>
+      </div>
+    </div>
+
+    <!-- alerts -->
+    <h2 id="alertsHead">Campus alerts <span class="r">scams caught campus-wide</span></h2>
+    <div class="card"><div id="alerts" class="empty">Loading alerts…</div></div>
+
+    <p style="margin-top:26px;font-size:12.5px;color:var(--ink-3)">
+      Demonstration build. Balance is derived from your seeded payments; no real funds move.
+    </p>
+  </main>
+</div>
+
+<script>
+  "use strict";
+  var $ = function (s) { return document.querySelector(s); };
+  function esc(v){ if(v===null||v===undefined) return ""; return String(v).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
+  function money(v){ var n=Number(v); if(!isFinite(n)) return "--"; return (Math.round(n*100)/100).toLocaleString("en-AE",{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+  // Turn an internal decision string like "CLEAR (R7_trusted_small)" into a
+  // human phrase for the student. The rule name is a developer detail.
+  var RULE_PLAIN = {
+    R7_trusted_small: "trusted sender, small amount",
+    R1c_unverified_high_risk: "unverified recipient, high risk",
+    R1_known_scam_link: "known scam link",
+    R1b_repeat_offender: "reported before",
+    R1d_injection_attempt: "tried to instruct the system",
+    R1e_lookalike_vendor: "name imitates a real vendor",
+    R1f_split_payment: "structured to avoid a limit",
+    R2_llm_unavailable_fallback: "couldn't be checked — sent to a person",
+    R2b_low_confidence: "not sure — sent to a person",
+    R3_outage_fallback: "directory unavailable — sent to a person",
+    R4_high_risk: "high risk",
+    R5_uncertain_value: "uncertain, high value",
+    R6_guardian_required: "needs a guardian",
+    R8_default_hold: "needs a person to confirm"
+  };
+  function humanRule(decision, state){
+    if (!decision) return state === "RECEIVED" ? "not yet checked" : "—";
+    var m = /^([A-Z]+)\s*\(([^)]+)\)/.exec(decision);
+    if (m) { var rule = m[2].trim(); return RULE_PLAIN[rule] || rule.replace(/_/g, " "); }
+    return decision;
+  }
+
+  // identity from login
+  var identity = null, me = null;
+  try { identity = localStorage.getItem("venator.identity"); me = JSON.parse(localStorage.getItem("venator.user") || "null"); } catch(e){}
+  if (!identity) { location.href = "/login"; }
+
+  var Q = "?user=" + encodeURIComponent(identity);
+  var LABEL = { CLEAR:"Clear", CLEARED:"Cleared", RECEIVED:"Received", TRIAGED:"Triaged",
+    PENDING_CONFIRMATION:"Needs you", PENDING_GUARDIAN:"Needs guardian", ESCALATED:"Scam — blocked",
+    CANCELLED:"Cancelled", CONFIRMED_CANCELLABLE:"Confirmed" };
+
+  $("#whoName").textContent = (me && me.display_name) || "Student";
+  $("#whoRole").textContent = ((me && me.role) || "student") + (me && me.student_name ? " · " + me.student_name : "");
+
+  var START_BALANCE = 250.00; // demo opening balance for the wallet
+
+  function loadWallet() {
+    fetch("/api/v1/transactions" + Q).then(function(r){ return r.json(); }).then(function(d){
+      var txns = (d.transactions || []);
+      var body = $("#rows");
+      if (!txns.length) { body.innerHTML = '<tr><td colspan="6" class="empty">No payments yet. Use “Check a payment” to run one.</td></tr>'; }
+      else {
+        body.innerHTML = txns.map(function(t){
+          var pay = t.state === "CLEAR" || t.state === "CLEARED" ? t.amount_aed : 0;
+          return "<tr data-open='" + esc(t.txn_id) + "'>" +
+            "<td><span class='idlink'>" + esc(t.txn_id) + "</span></td>" +
+            "<td>" + esc(t.recipient_id) + "</td>" +
+            "<td>" + esc(t.purpose || "—") + "</td>" +
+            "<td class='num'>" + money(t.amount_aed) + "</td>" +
+            "<td><span class='chip s-" + esc(t.state) + "'>" + esc(LABEL[t.state] || t.state) + "</span></td>" +
+            "<td style='font-size:13px;color:var(--ink-3)'>" + esc(humanRule(t.decision, t.state)) + "</td>" +
+            "</tr>";
+        }).join("");
+      }
+      var spend = txns.reduce(function(a,t){ return a + ((t.state==="CLEAR"||t.state==="CLEARED") ? Number(t.amount_aed) : 0); }, 0);
+      var cleared = txns.filter(function(t){ return t.state==="CLEAR"||t.state==="CLEARED"; }).length;
+      var hold = txns.filter(function(t){ return t.state==="PENDING_CONFIRMATION"||t.state==="PENDING_GUARDIAN"; }).length;
+      var esc2 = txns.filter(function(t){ return t.state==="ESCALATED"; }).length;
+      $("#bal").innerHTML = money(START_BALANCE - spend) + "<small>AED</small>";
+      $("#kTotal").textContent = txns.length;
+      $("#kTotalLbl").textContent = txns.length === 1 ? "Payment" : "Payments";
+      $("#kClear").textContent = cleared;
+      $("#kHold").textContent = hold;
+      $("#kEsc").textContent = esc2;
+      $("#payCount").textContent = txns.length + (txns.length === 1 ? " payment" : " payments");
+    }).catch(function(){ $("#rows").innerHTML = '<tr><td colspan="6" class="empty">Could not load payments.</td></tr>'; });
+  }
+
+  function loadAlerts() {
+    fetch("/api/v1/broadcasts" + Q).then(function(r){ return r.json(); }).then(function(d){
+      var list = (d.broadcasts || d.alerts || []) || [];
+      var el = $("#alerts");
+      if (!list.length) { el.className = "empty"; el.textContent = "No scam alerts have been broadcast yet. Check a suspicious payment and it may raise one."; return; }
+      el.className = "";
+      el.innerHTML = list.slice(0,8).map(function(b){
+        return "<div style='padding:13px 16px;border-bottom:1px solid var(--hair)'>" +
+          "<b style='font-size:14.5px'>" + esc(b.title || b.host || b.link || "Scam link reported") + "</b>" +
+          "<div style='font-size:13.5px;color:var(--ink-2);margin-top:3px'>" + esc(b.detail || b.message || "") + "</div></div>";
+      }).join("");
+    }).catch(function(){ /* leave default */ });
+  }
+
+  $("#checkBtn").addEventListener("click", function(){
+    var m = ($("#msg").value || "").trim();
+    if (!m) { $("#subErr").textContent = "Type the message you were sent."; return; }
+    $("#subErr").textContent = "";
+    var btn = this; btn.classList.add("busy"); btn.textContent = "Reading it…";
+    $("#verdict").classList.remove("on");
+    fetch("/api/v1/report" + Q, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: m,
+        student: (me && me.student_name) || "You",
+        recipient_id: ($("#rcp").value || "R-GHOST").trim(),
+        amount: Number($("#amt").value || 0),
+        age: 16
+      })
+    }).then(function(r){ return r.json().then(function(d){ return {ok:r.ok,d:d}; }); })
+      .then(function(res){
+        btn.classList.remove("busy"); btn.textContent = "Check this payment";
+        if (!res.ok) { $("#subErr").textContent = res.d.error || "Could not check it."; return; }
+        var d = res.d;
+        $("#vAction").textContent = LABEL[d.action] || d.action || "—";
+        $("#vRule").textContent = d.rule ? "rule: " + d.rule : "";
+        $("#vWhy").textContent = d.explanation || "";
+        var v = $("#verdict");
+        v.className = "verdict on v-" + (d.action || "CLEAR");
+        loadWallet(); loadAlerts();
+      }).catch(function(){
+        btn.classList.remove("busy"); btn.textContent = "Check this payment";
+        $("#subErr").textContent = "Network error — is the server running?";
+      });
+  });
+
+  // sidebar scroll targets
+  document.querySelectorAll("[data-go]").forEach(function(b){
+    b.addEventListener("click", function(){
+      var id = b.getAttribute("data-go");
+      var map = { wallet: "#payHead", submit: "#submitHead", alerts: "#alertsHead" };
+      var t = document.querySelector(map[id]); if (t) t.scrollIntoView({ behavior: "smooth", block: "start" });
+      document.querySelectorAll(".nav").forEach(function(n){ n.removeAttribute("aria-current"); });
+      b.setAttribute("aria-current", "page");
+    });
+  });
+
+  $("#logout").addEventListener("click", function(){ try{ localStorage.clear(); }catch(e){} });
+
+  loadWallet();
+  loadAlerts();
+
+  // Keep the wallet live: re-read payments and alerts on a gentle timer so a
+  // payment decided elsewhere (or by a guardian) shows up without a reload.
+  setInterval(function () {
+    if (document.hidden) return;
+    loadWallet(); loadAlerts();
+  }, 8000);
+</script>
+</body>
+</html>
