@@ -1,321 +1,492 @@
-# PocketPay — Campus Wallet & Scam Defense Agent
+<div align="center">
 
-**TechX Dubai '26 · AI Agent Arena · Domain 1: FinTech Fraud & Compliance (High School Track)**
+<img src="assets/pocketpay-mark.svg" alt="PocketPay" width="104" height="104">
 
-A campus wallet where students pay each other by message. That's the attack surface. PocketPay
-puts an autonomous agent in front of every transfer: it reads the chat like a human would, then
-hands its finding to a piece of code that has *no opinions and full authority*.
+# 🛡️ PocketPay
 
-> **Thesis — the LLM never gets to move money.**
-> The model produces an **opinion** (a risk score, a confidence, a plain-English reason).
-> Deterministic Python owns every **decision**, and a single guarded writer owns every
-> **state change**. Intelligence is probabilistic. Authority is not.
+### Campus Wallet & Scam Defense Agent
+
+**An autonomous payment-triage agent for a university campus wallet.**
+The model reads the message. The code decides. The human holds the last word.
+
+<br>
+
+[![TechX Dubai '26](https://img.shields.io/badge/TechX%20Dubai%20'26-AI%20Agent%20Arena-F2A900?style=for-the-badge&labelColor=2F3A45)](#)
+[![Domain 1](https://img.shields.io/badge/Domain%201-FinTech%20Fraud%20%26%20Compliance-2E7D7B?style=for-the-badge&labelColor=2F3A45)](#)
+[![Track](https://img.shields.io/badge/Track-High%20School-4B5763?style=for-the-badge&labelColor=2F3A45)](#)
+
+[![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white&style=flat-square)](#)
+[![SQLite](https://img.shields.io/badge/SQLite-stdlib%20only-003B57?logo=sqlite&logoColor=white&style=flat-square)](#)
+[![Dependencies](https://img.shields.io/badge/dependencies-1%20(openai)-35B58A?style=flat-square)](#)
+[![Tests](https://img.shields.io/badge/tests-12%20passing-35B58A?style=flat-square)](#)
+[![Scenarios](https://img.shields.io/badge/scenarios-21-C9973F?style=flat-square)](#-the-dataset)
+[![Wallet freeze](https://img.shields.io/badge/wallet%20freeze-structurally%20impossible-DD5C5C?style=flat-square)](#-the-safety-invariants)
+[![License](https://img.shields.io/badge/license-MIT-8E99A5?style=flat-square)](LICENSE)
+[![PRs](https://img.shields.io/badge/PRs-welcome-2E7D7B?style=flat-square)](#)
+
+<br>
+
+> ### 🔒 The thesis
+> **The LLM never gets to move money.**
+> The model produces an *opinion* — a risk score, a confidence, a plain-English reason.
+> Deterministic Python owns every *decision*. A single guarded writer owns every *state change*.
+> Intelligence is probabilistic. **Authority is not.**
+
+<br>
+
+[**Why this exists**](#-why-this-exists) ·
+[**Architecture**](#-architecture) ·
+[**The rules**](#-the-decision-engine-rules-r1r7) ·
+[**Safety**](#-the-safety-invariants) ·
+[**Run it**](#-run-it) ·
+[**Demo script**](#-demo-script-for-judges-4-min) ·
+[**Dataset**](#-the-dataset) ·
+[**Limits**](#-known-limits-stated-honestly)
+
+</div>
 
 ---
 
-## Contents
-- [The 30-second version](#the-30-second-version)
-- [Why this exists](#why-this-exists)
-- [Architecture](#architecture)
-- [The decision engine (rules R1–R7)](#the-decision-engine-rules-r1r7)
-- [The safety invariants](#the-safety-invariants)
-- [Run it](#run-it)
-- [The dashboard](#the-dashboard)
-- [Demo script for judges (≈4 min)](#demo-script-for-judges-4-min)
-- [The dataset](#the-dataset)
-- [What we shipped against the brief](#what-we-shipped-against-the-brief)
-- [Stretch goals](#stretch-goals)
-- [Engineering notes](#engineering-notes)
-- [Repository layout](#repository-layout)
+## 📖 Contents
+
+| | Section | What's in it |
+|:--:|---|---|
+| 💡 | [Why this exists](#-why-this-exists) | The problem, and why the LLM/authority split is the only defensible answer |
+| 🏗️ | [Architecture](#-architecture) | Six stages, four modules, no framework |
+| ⚖️ | [The decision engine](#-the-decision-engine-rules-r1r7) | Rules **R1–R7**, first match wins |
+| 🔐 | [The safety invariants](#-the-safety-invariants) | Four claims we'd defend under questioning |
+| 🚀 | [Run it](#-run-it) | Five commands |
+| 🖥️ | [The dashboard](#-the-dashboard) | The stage interface |
+| 🎬 | [Demo script](#-demo-script-for-judges-4-min) | Five moves, ~4 minutes |
+| 📊 | [The dataset](#-the-dataset) | 21 scenarios, 7 of them real |
+| ✅ | [Brief checklist](#-what-we-shipped-against-the-brief) | Requirement → status → where |
+| 🚁 | [Stretch goals](#-stretch-goals) | What we built on top |
+| 🧠 | [Engineering notes](#-engineering-notes) | Design decisions and trade-offs |
+| ⚠️ | [Known limits](#-known-limits-stated-honestly) | Stated out loud, on purpose |
+| 🗂️ | [Repository layout](#-repository-layout) | Where everything lives |
 
 ---
 
-## The 30-second version
+## 💡 Why this exists
 
+Peer-to-peer payment on a campus is a **social problem wearing a technical costume**. The money
+moves because a *message* said so — and messages are exactly where fraud lives:
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+**🚩 The attack surface**
+
+- ⏰ Manufactured urgency
+- 🫥 Scarcity pressure
+- 💸 Prices that are too good
+- 🔗 Off-platform redirects
+- 🔑 Credential requests
+- 🎭 "Send it to my cousin instead"
+- 👻 Brand-new accounts, zero history
+
+</td>
+<td width="50%" valign="top">
+
+**🧩 Three things are true at once**
+
+1. **A human can't read every message.** The scam works because nobody was watching.
+2. **An LLM is genuinely good at reading messy human text** — and genuinely unsafe as an authority. It hallucinates. It can be injected. It fails non-deterministically.
+3. **Money needs an answer you can defend to a regulator**, not a plausible paragraph.
+
+</td>
+</tr>
+</table>
+
+So we split the two. The model does what it's good at — *reading*. Code does what it must —
+*deciding*. A human is the last resort for anything uncertain.
+
+> 🎯 **The result:** a system that is **autonomous in its judgement** and **auditable in its actions**.
+
+---
+
+## 🏗️ Architecture
+
+Four modules, no framework, no orchestration library — **the state machine is written by hand,
+deliberately.** Every arrow below is a real function call, and every one of them writes a row.
+
+```mermaid
+flowchart TD
+    A(["💬 student message + transfer intent"]) --> B
+
+    B["① get_transaction_context()<br/>tools.py · FACTS"]
+    B --> C["② check_scam_link()<br/>tools.py · FACTS · free, runs first"]
+    C --> D["③ LLM.analyze()<br/>agent.py · OPINION · probabilistic, contained"]
+    D --> E["④ verify_campus_recipient()<br/>tools.py · FACTS · may time out"]
+    E --> F["⑤ guard.decide()<br/>guard.py · DECISION · deterministic"]
+    F --> G["⑥ update_payment_state()<br/>tools.py · MONEY · single legal writer"]
+    G --> H(["🗄️ decision_log — the visible audit trail"])
+
+    style B fill:#5B8DD9,stroke:#2F3A45,color:#fff
+    style C fill:#5B8DD9,stroke:#2F3A45,color:#fff
+    style D fill:#46B8CF,stroke:#2F3A45,color:#fff
+    style E fill:#5B8DD9,stroke:#2F3A45,color:#fff
+    style F fill:#DD5C5C,stroke:#2F3A45,color:#fff
+    style G fill:#35B58A,stroke:#2F3A45,color:#fff
+    style H fill:#C9973F,stroke:#2F3A45,color:#fff
+    style A fill:#2F3A45,stroke:#2F3A45,color:#fff
 ```
-student message + transfer intent
-        │
-   ①   tools.get_transaction_context() ............ FACTS   (deterministic)
-   ②   tools.check_scam_link() .................... FACTS   (deterministic, free, runs first)
-   ③   LLM.analyze() .............................. OPINION (probabilistic, contained)
-   ④   tools.verify_campus_recipient() ............ FACTS   (deterministic, may time out)
-   ⑤   guard.decide() ............................. DECISION (deterministic, exhaustive)
-   ⑥   tools.update_payment_state() ............... MONEY   (single legal writer, state machine)
-        │
-        └─ every step appended to decision_log → the visible audit trail
-```
 
-Five facts-or-opinion stages, one authority stage, one writer. Nothing else can touch a wallet.
-
----
-
-## Why this exists
-
-Peer-to-peer payment on a campus is a social problem wearing a technical costume. The money moves
-because a *message* said so — and messages are where fraud lives: manufactured urgency, scarcity
-pressure, prices that are too good, off-platform redirects, credential requests, "send it to my
-cousin instead", brand-new accounts with zero history.
-
-Three things are true at once:
-
-1. **A human can't read every message.** The scam usually works because nobody was watching.
-2. **A language model is genuinely good at reading messy human text** — and genuinely unsafe as
-   an authority. It hallucinates, it can be prompt-injected, and it fails non-deterministically.
-3. **Money needs an answer you can defend to a regulator**, not a plausible-sounding paragraph.
-
-So we split the two. The model does what it's good at (reading), code does what it must (deciding),
-and a human is always the last resort for anything uncertain. The result is a system that is
-*autonomous in its judgement and auditable in its actions*.
-
----
-
-## Architecture
-
-Four modules, no framework, no orchestration library — the state machine is written by hand,
-deliberately. Every arrow below is a real function call, and every one of them writes a row.
+**Five facts-or-opinion stages. One authority stage. One writer.** Nothing else can touch a wallet.
 
 | Stage | File | Responsibility | Nature |
-|---|---|---|---|
-| ① Context | `pocketpay/tools.py: get_transaction_context` | load the flagged txn | fact |
-| ② Link cache | `pocketpay/tools.py: check_scam_link` | known-phishing URL lookup | fact |
-| ③ Analysis | `pocketpay/agent.py: _analyze` | risk, confidence, indicators, reason | **opinion** |
-| ④ Directory | `pocketpay/tools.py: verify_campus_recipient` | tier, account age, report count | fact |
-| ⑤ Guard | `pocketpay/guard.py: decide` | the verdict | **authority** |
-| ⑥ Writer | `pocketpay/tools.py: update_payment_state` | the only legal state mutation | money |
+|:--:|---|---|:--:|
+| ① | `pocketpay/tools.py: get_transaction_context` | load the flagged transaction | 🔵 fact |
+| ② | `pocketpay/tools.py: check_scam_link` | known-phishing URL lookup | 🔵 fact |
+| ③ | `pocketpay/agent.py: _analyze` | risk, confidence, indicators, reason | 🟡 **opinion** |
+| ④ | `pocketpay/tools.py: verify_campus_recipient` | tier, account age, report count | 🔵 fact |
+| ⑤ | `pocketpay/guard.py: decide` | the verdict | 🔴 **authority** |
+| ⑥ | `pocketpay/tools.py: update_payment_state` | the only legal state mutation | 🟢 money |
 
-**The loop guard** (`pocketpay/agent.py: triage`): if a transaction is already awaiting a human,
-already escalated, or already settled, `triage()` returns immediately — no second LLM call, no
-re-asking, no polling. State lives in SQLite, so it survives a restart. There is no daemon, no
-queue worker, no `while True` anywhere in the codebase: the agent is *called*, it reads the world,
-it acts, it exits.
+### 🔁 The loop guard
+`pocketpay/agent.py: triage` — if a transaction is already awaiting a human, already escalated, or
+already settled, `triage()` **returns immediately**. No second LLM call. No re-asking. No polling.
 
-**The parser** (`pocketpay/agent.py: _parse_analysis`): a small local model sometimes truncates its
-JSON. The parser repairs unbalanced braces, trims trailing junk, and falls back to a regex
-extraction of the two numbers it needs. If all of that fails the analysis is `None` — which the
-guard treats as *no opinion*, not as *safe*. That distinction is the whole design in one line.
+State lives in SQLite, so it survives a restart. There is **no daemon, no queue worker, and no
+`while True` anywhere in the codebase** — the agent is *called*, it reads the world, it acts, it exits.
+
+### 🩹 The parser
+`pocketpay/agent.py: _parse_analysis` — a small local model sometimes truncates its JSON. The parser
+repairs unbalanced braces, trims trailing junk, and falls back to regex extraction of the two numbers
+it needs. If all of that fails the analysis is `None` — which the guard treats as **no opinion**, not
+as **safe**.
+
+> That distinction is the whole design in one line.
 
 ---
 
-## The decision engine (rules R1–R7)
+## ⚖️ The decision engine (rules R1–R7)
 
-`guard.py` is a pure function — no I/O, no clock, no randomness, 74 lines. Rules fire in order,
-first match wins, and the matching rule's name is written into the audit trail so a reviewer can
-replay the reasoning.
+`guard.py` is a **pure function** — no I/O, no clock, no randomness, **74 lines**. Rules fire in
+order, first match wins, and the matching rule's name is written into the audit trail so a reviewer
+can replay the reasoning.
 
 | Rule | Trigger | Verdict | Why |
-|---|---|---|---|
-| **R1** | message contains a URL already confirmed as a scam | `ESCALATED` | hard fact beats any opinion |
-| **R1b** | recipient has ≥2 confirmed scam reports | `ESCALATED` | hard fact, repeat offender |
-| **R2** | analysis engine unavailable | `HOLD` | never guess, never block |
-| **R2b** | model confidence < 0.5 | `HOLD` | flag uncertainty, don't act on it |
-| **R2c** | analysis returned no risk score | `HOLD` | missing data is not "safe" |
-| **R1c** | unverified recipient **and** risk ≥ 70 | `ESCALATED` | fact + confident opinion |
-| **R3** | directory service timed out | `HOLD` | degrade gracefully, wallet stays open |
-| **R4** | risk ≥ 70 | `ESCALATED` | clear scam pattern, staff review |
-| **R5** | risk 30–69, unverified, > 150 AED | `ESCALATED` | the genuinely uncertain middle |
-| **R6** | trusted party, risk < 30, ≤ 300 AED | `CLEAR` | canteen snacks never wait |
-| **R7** | everything else | `HOLD` | ask the student, exactly once |
+|:--:|---|:--:|---|
+| **R1** | message contains a URL already confirmed as a scam | 🔴 `ESCALATED` | hard fact beats any opinion |
+| **R1b** | recipient has ≥2 confirmed scam reports | 🔴 `ESCALATED` | hard fact, repeat offender |
+| **R2** | analysis engine unavailable | 🟡 `HOLD` | never guess, never block |
+| **R2b** | model confidence < 0.5 | 🟡 `HOLD` | flag uncertainty, don't act on it |
+| **R2c** | analysis returned no risk score | 🟡 `HOLD` | missing data is not "safe" |
+| **R1c** | unverified recipient **and** risk ≥ 70 | 🔴 `ESCALATED` | fact + confident opinion |
+| **R3** | directory service timed out | 🟡 `HOLD` | degrade gracefully, wallet stays open |
+| **R4** | risk ≥ 70 | 🔴 `ESCALATED` | clear scam pattern, staff review |
+| **R5** | risk 30–69, unverified, > 150 AED | 🔴 `ESCALATED` | the genuinely uncertain middle |
+| **R6** | trusted party, risk < 30, ≤ 300 AED | 🟢 `CLEAR` | canteen snacks never wait |
+| **R7** | everything else | 🟡 `HOLD` | ask the student, exactly once |
 
-Note the ordering, because it is the point: **facts (R1, R1b) outrank opinions (R1c, R4, R5)**,
-and **uncertainty (R2, R2b, R2c, R3, R7) never resolves to a freeze** — it resolves to a question.
-
----
-
-## The safety invariants
-
-These are the claims we'd defend under questioning, and each one is enforced by structure rather
-than by care.
-
-**1. There is no `BLOCK` state.** The state machine has exactly three terminal-ish outcomes, and
-the schema literally cannot express a permanent freeze:
-
-```
-RECEIVED ──► TRIAGED ──► CLEAR
-                    └──► PENDING_CONFIRMATION ──► CLEARED | CANCELLED
-                    └──► ESCALATED ──────────────► PENDING_CONFIRMATION | CANCELLED
-```
-
-The worst state a transaction can reach is *awaiting a human*, and a human can always resolve it.
-Even `ESCALATED` can be downgraded. It is not policy that funds are never frozen forever — it is
-arithmetic. (`pocketpay/tools.py: update_payment_state`)
-
-**2. One writer, and it validates.** `update_payment_state` is the only function in the codebase
-that mutates `transactions.state`, and it rejects any illegal transition with `ValueError`. The LLM
-has no import path to it. The web layer has no route to it. There is exactly one door.
-
-**3. Degradation, not failure.** The brain dying (R2), the brain mumbling (R2b/R2c), and the
-directory service hanging (R3) are all *modeled states* with defined behaviour, not crashes. We hit
-the brain-unavailable path during development — live, on TX-008 — and the system held the transfer
-and stayed up. That was not a demo; that was the design working.
-
-**4. No unbounded loop.** Nothing polls. A transaction awaiting a human is never re-triaged
-(loop guard), so the agent cannot spin, re-ask, or re-bill the model. The number of LLM calls for
-any transaction is at most one, ever.
+> ### 🔑 Read the ordering. That's the point.
+> **Facts (R1, R1b) outrank opinions (R1c, R4, R5).**
+> **Uncertainty (R2, R2b, R2c, R3, R7) never resolves to a freeze — it resolves to a question.**
 
 ---
 
-## Run it
+## 🔐 The safety invariants
+
+The claims we'd defend under questioning. Each one is enforced by **structure**, not by care.
+
+<table>
+<tr>
+<td width="33%" valign="top">
+
+### 1️⃣
+
+**There is no `BLOCK` state.**
+
+The state machine has exactly three outcomes, and the schema *literally cannot express* a permanent
+freeze.
+
+</td>
+<td width="33%" valign="top">
+
+### 2️⃣
+
+**One writer, and it validates.**
+
+`update_payment_state` is the *only* function that mutates `transactions.state`, and it rejects
+illegal transitions with `ValueError`.
+
+</td>
+<td width="33%" valign="top">
+
+### 3️⃣
+
+**Degradation, not failure.**
+
+Brain dead (R2), brain mumbling (R2b/R2c), directory hanging (R3) — all **modeled states** with
+defined behaviour, not crashes.
+
+</td>
+</tr>
+</table>
+
+```mermaid
+stateDiagram-v2
+    [*] --> RECEIVED
+    RECEIVED --> TRIAGED
+    TRIAGED --> CLEAR
+    TRIAGED --> PENDING_CONFIRMATION
+    TRIAGED --> ESCALATED
+    PENDING_CONFIRMATION --> CLEARED
+    PENDING_CONFIRMATION --> CANCELLED
+    ESCALATED --> PENDING_CONFIRMATION : staff may downgrade
+    ESCALATED --> CANCELLED
+
+    note right of PENDING_CONFIRMATION
+        Worst reachable state.
+        A human always resolves it.
+    end note
+```
+
+<div align="center">
+
+**🚫 There is no `BLOCK` state. It is not policy that funds are never frozen forever — it is arithmetic.**
+
+</div>
+
+- **The LLM has no import path to the writer.** The web layer has no route to it. There is exactly
+  one door. 🚪
+- **We hit the brain-unavailable path during development** — live, on TX-008 — and the system held
+  the transfer and stayed up. Not a demo. The design working. 🛠️
+- **4️⃣ No unbounded loop.** Nothing polls. A transaction awaiting a human is never re-triaged, so
+  the agent cannot spin, re-ask, or re-bill the model. **LLM calls per transaction: at most one, ever.**
+
+---
+
+## 🚀 Run it
 
 ```bash
 PY=~/.venv/bin/python          # needs the `openai` package; local model at 127.0.0.1:8080
 
-$PY main.py build              # seed the dataset → campus_wallet_logs.sqlite
-$PY main.py web                # ★ the dashboard → http://127.0.0.1:8401
-$PY main.py tests              # guard-rule + parser unit tests (no LLM, instant)
-$PY main.py demo               # scripted 21-scenario run in the terminal
-$PY main.py ui                 # original terminal interface (fallback if the browser dies)
+$PY main.py build              # 🌱 seed the dataset → campus_wallet_logs.sqlite
+$PY main.py web                # ⭐ the dashboard → http://127.0.0.1:8401
+$PY main.py tests              # 🧪 guard-rule + parser unit tests (no LLM, instant)
+$PY main.py demo               # 🎬 scripted 21-scenario run in the terminal
+$PY main.py ui                 # ⌨️  original terminal interface (fallback)
 ```
 
-The dashboard is the stage interface. `tests` and `demo` are the fallbacks — if the venue's
-network, browser, or the local model misbehaves, `demo` runs the entire narrative from a terminal
-with zero dependencies.
+> 💡 The dashboard is the stage interface. `tests` and `demo` are the fallbacks — if the venue's
+> network, browser, or the local model misbehaves, **`demo` runs the entire narrative from a
+> terminal with zero dependencies.**
 
 ---
 
-## The dashboard
+## 🖥️ The dashboard
 
-`pocketpay/web.py` is stdlib-only — `http.server` plus a single embedded HTML page, no build step,
-no CDN, no npm. It decides **nothing**; it reads the same SQLite database and calls the same
-`PocketPayAgent` the terminal does. Same architecture, wearing a product face.
+`pocketpay/web.py` is **stdlib-only** — `http.server` plus a single embedded HTML page. No build
+step. No CDN. No npm. It decides **nothing**; it reads the same SQLite database and calls the same
+`PocketPayAgent` the terminal does.
 
-What it shows:
+<div align="center">
 
-- **The queue** — every transaction with its live state, filterable and searchable, exactly as a
-  staff reviewer would see it.
-- **The audit trail** — per transaction, the full chain: blue tool steps (facts), cyan LLM step
-  (opinion), red guard step (the decision), green human step (the answer).
-- **Live streaming** — while the agent works, the board polls the trail and paints each step as it
-  commits, with a pulsing ghost row while the model is reading. You watch the agent think.
-- **The human moment** — a pending transaction shows *Respond as student*; confirm releases it,
-  cancel stops it and reports the seller. Confirmation and cancellation are logged like everything
-  else.
-- **The broadcast feed** — when a phishing link is confirmed, the alert appears in the footer and
-  as a toast, campus-wide, in real time.
+*Same architecture, wearing a product face.* 🎩
 
-Design note: the palette is muted and semantic — green clears, amber waits, red escalates, never
-decorative — with focus rings and `prefers-reduced-motion` respected. It's an operations console,
-not a pitch deck.
+</div>
+
+| Feature | What it does |
+|---|---|
+| 🗂️ **The queue** | every transaction with its live state, filterable and searchable, exactly as a staff reviewer sees it |
+| 🔍 **The audit trail** | per transaction, the full chain: 🔵 tool steps (facts), 🟡 LLM step (opinion), 🔴 guard step (decision), 🟢 human step (answer) |
+| 📡 **Live streaming** | while the agent works, the board polls the trail and paints each step as it commits — with a pulsing ghost row while the model is reading. **You watch the agent think.** |
+| 🙋 **The human moment** | a pending transaction shows *Respond as student*; confirm releases it, cancel stops it and reports the seller |
+| 📢 **The broadcast feed** | when a phishing link is confirmed, the alert appears campus-wide, in real time |
+
+> 🎨 **Design note:** the palette is muted and semantic — green clears, amber waits, red escalates,
+> never decorative — with focus rings and `prefers-reduced-motion` respected. It's an operations
+> console, not a pitch deck.
 
 ---
 
-## Demo script for judges (≈4 min)
+## 🎬 Demo script for judges (≈4 min)
 
-**1 — the brief's own scam (TX-003).** Open it → *Run agent chain*. Narrate the steps as they
-paint: the tool reads the facts, the model calls it at risk 96 with the indicator "fake .top
-domain", the guard escalates under R1c. Then point at the footer: the link is now on the campus
-broadcast feed.
+<table>
+<tr><td width="52" align="center"><h3>1️⃣</h3></td><td>
 
-**2 — the second student (TX-013).** Same phishing URL, different sender. This one never reaches
-the model — `check_scam_link` catches it first and R1 escalates on the hard fact alone. *"The
-system learned from a case that happened ten seconds ago."*
+### The brief's own scam — `TX-003`
 
-**3 — money that needs a human (TX-012).** 800 AED for a laptop share, all above board. Chain →
-`PENDING_CONFIRMATION`. *"The guard will not auto-clear 800 AED, and the model can't make it.
-Watch who does."* Hit **Respond as student** → confirm → `CLEARED`.
+Open it → **Run agent chain**. Narrate the steps as they paint:
 
-**4 — the judge moment.** Ask a judge to read you a shady message, or say this one out loud:
+- 🔵 the tool reads the facts
+- 🟡 the model calls it at **risk 96**, indicator *"fake .top domain"*
+- 🔴 the guard escalates under **R1c**
+
+Then point at the footer: the link is now on the **campus broadcast feed**. 📢
+
+</td></tr>
+<tr><td align="center"><h3>2️⃣</h3></td><td>
+
+### The second student — `TX-013`
+
+Same phishing URL, different sender. **This one never reaches the model** —
+`check_scam_link` catches it first and **R1** escalates on the hard fact alone.
+
+> *"The system learned from a case that happened ten seconds ago."* ⚡
+
+</td></tr>
+<tr><td align="center"><h3>3️⃣</h3></td><td>
+
+### Money that needs a human — `TX-012`
+
+800 AED for a laptop share, all above board. Chain → 🟡 `PENDING_CONFIRMATION`.
+
+> *"The guard will not auto-clear 800 AED, and the model can't make it. Watch who does."*
+
+Hit **Respond as student** → confirm → 🟢 `CLEARED`.
+
+</td></tr>
+<tr><td align="center"><h3>4️⃣</h3></td><td>
+
+### 🎤 The judge moment
+
+Ask a judge to read you a shady message, or say this one out loud:
 
 > *"selling front row fest pass 50 aed!! send to @campus_tix_99 fast https://pocketpay-claims.top/tix"*
 
-Paste it into the live box on the queue panel → the real chain triages it in front of them, and
-escalates with a plain-English reason. Nothing is scripted. Nothing is faked.
+Paste it into the live box → **the real chain triages it in front of them** and escalates with a
+plain-English reason. **Nothing is scripted. Nothing is faked.**
 
-**5 — optional, the killer detail.** Run the chain on TX-003 *again*. Instead of re-asking, the
-loop-guard step appears: state is already `ESCALATED`, no second model call. That's the brief's
-"no infinite loops / no repeated questioning" requirement, demonstrated rather than asserted.
+</td></tr>
+<tr><td align="center"><h3>5️⃣</h3></td><td>
 
-Every word on screen is real output from real code, including the LLM's own phrasing. If the model
-says something odd, we say so — it's an opinion, and the opinion isn't what decides.
+### 🥇 Optional — the killer detail
+
+Run the chain on `TX-003` **again**. Instead of re-asking, the **loop-guard** step appears: state is
+already `ESCALATED`, no second model call.
+
+> That's the brief's *"no infinite loops / no repeated questioning"* requirement —
+> **demonstrated rather than asserted.**
+
+</td></tr>
+</table>
 
 ---
 
-## The dataset
+## 📊 The dataset
 
 `pocketpay/db.py` builds `campus_wallet_logs.sqlite` — the schema, the 21 scenarios, the recipient
 directory (tiers, account ages, report counts), the scam-link registry, the broadcast feed, and the
 decision log.
 
-- **14 authored scenarios** covering the full rule surface: canteen auto-clears, the brief's exact
-  ticket scam, credential phishing, a repeat offender, low-confidence slang, three genuinely
-  uncertain mid-risk cases, a **directory outage**, and both human resolutions.
-- **7 real messages mined from the UCI SMS Spam Collection** (`pocketpay/miner.py`) — the open
-  dataset the brief recommends — pulled into the same pipeline. All 7 real scams escalate.
+<div align="center">
 
-Sample data is synthetic and labelled as such in the UI; the mined corpus is public research data.
+| 📝 Authored | 🌐 Real (mined) | 🎯 Total |
+|:--:|:--:|:--:|
+| **14** | **7** | **21** |
+| full rule-surface coverage | UCI SMS Spam Collection | every rule exercised |
+
+</div>
+
+- **14 authored scenarios** — canteen auto-clears, the brief's exact ticket scam, credential
+  phishing, a repeat offender, low-confidence slang, three genuinely uncertain mid-risk cases, a
+  **directory outage**, and both human resolutions.
+- **7 real messages mined from the [UCI SMS Spam Collection](https://archive.ics.uci.edu/dataset/228/sms+spam+collection)**
+  (`pocketpay/miner.py`) — the open dataset the brief recommends — pulled into the same pipeline.
+  **All 7 real scams escalate.** ⚠️
+
+> 🏷️ Sample data is synthetic and labelled as such in the UI. The mined corpus is public research data.
 
 ---
 
-## What we shipped against the brief
+## ✅ What we shipped against the brief
 
 | Requirement | Status | Where |
-|---|---|---|
-| ≥10 scenarios | **21** | `db.py: SCENARIOS` + `miner.py` |
-| Visible decision log, ≥3 steps per case | chain per txn, typically 5–7 steps | `db.py: decision_log`, web chain panel |
-| Human confirmation of uncertain payments | pending → human answers once → resolved | `agent.resolve`, web modal |
-| Stateful memory (no re-asking) | loop guard, SQLite-persisted | `agent.triage` |
-| Graceful degradation on service failure | R2 / R2b / R2c / R3 | `guard.py` |
-| Never permanently freeze a wallet | no `BLOCK` state exists | `tools.update_payment_state` |
-| LLM vs deterministic separation | opinion vs authority vs writer | whole architecture |
-| Three mock services | context, directory, state writer | `tools.py` |
+|---|:--:|---|
+| ≥10 scenarios | ✅ **21** | `db.py: SCENARIOS` + `miner.py` |
+| Visible decision log, ≥3 steps per case | ✅ chain per txn, typically **5–7 steps** | `db.py: decision_log`, web chain panel |
+| Human confirmation of uncertain payments | ✅ pending → human answers once → resolved | `agent.resolve`, web modal |
+| Stateful memory (no re-asking) | ✅ loop guard, SQLite-persisted | `agent.triage` |
+| Graceful degradation on service failure | ✅ R2 / R2b / R2c / R3 | `guard.py` |
+| Never permanently freeze a wallet | ✅ **no `BLOCK` state exists** | `tools.update_payment_state` |
+| LLM vs deterministic separation | ✅ opinion vs authority vs writer | whole architecture |
+| Three mock services | ✅ context, directory, state writer | `tools.py` |
 
-## Stretch goals
+### 🚁 Stretch goals
 
-- **Automatic scam-alert broadcast.** A confirmed phishing URL is registered and pushed to a campus
-  feed; the next student to receive the same link is caught by URL *before the model is invoked*.
-  Demonstrated live by the TX-003 → TX-013 pair.
-- **Staff hours saved.** Every auto-cleared transfer is quantified on the dashboard header — the
+- **📢 Automatic scam-alert broadcast** — a confirmed phishing URL is registered and pushed to a
+  campus feed; the next student to receive the same link is caught by URL *before the model is
+  invoked*. **Demonstrated live by the TX-003 → TX-013 pair.**
+- **⏱️ Staff hours saved** — every auto-cleared transfer is quantified on the dashboard header. The
   assistant's worth, in the units a school actually cares about.
-- **Live ad-hoc triage.** Any message, typed in front of the judges, runs the real agent chain.
+- **🎲 Live ad-hoc triage** — any message, typed in front of the judges, runs the real agent chain.
 
 ---
 
-## Engineering notes
+## 🧠 Engineering notes
 
-**Opinion at the edges, authority in the middle.** The model sits inside a bounded box: it receives
-a formatted prompt, it returns JSON that gets parsed defensively, and its output can only ever
-reach `guard.decide` as one argument. It cannot call tools, cannot choose actions, cannot write
-state. The worst thing a hallucinating or prompt-injected model can do is produce a *wrong opinion*
-— which the deterministic rules are already written to distrust when confidence is low.
+**🎯 Opinion at the edges, authority in the middle.**
+The model sits inside a bounded box: it receives a formatted prompt, returns JSON parsed
+defensively, and its output can only ever reach `guard.decide` as **one argument**. It cannot call
+tools. It cannot choose actions. It cannot write state. The worst a hallucinating or
+prompt-injected model can do is produce a *wrong opinion* — which the deterministic rules are
+already written to distrust when confidence is low.
 
-**Fail soft, log everything.** Every non-happy path writes its reason into the audit trail before
-the verdict lands: parser failure, engine outage, directory timeout. A reviewer never has to guess
-why a transfer was held.
+**🧯 Fail soft, log everything.**
+Every non-happy path writes its reason into the audit trail *before* the verdict lands: parser
+failure, engine outage, directory timeout. A reviewer never has to guess why a transfer was held.
 
-**Boring where it counts.** No framework, no ORM, no async, no orchestration library. SQLite and
-stdlib. The parts that matter — rules, state machine, single writer — are short enough to read
-aloud on stage, which is the point.
-
-**Known limits, stated honestly.** The directory and the model are local mocks, so "tiers" and
-"report counts" are synthetic. Scam-link matching is exact-string, not fuzzy, so a typosquat
-evades it until it's been seen once. The guard's thresholds (300/150/70/0.5) are defensible, not
-tuned on real fraud data. Everything else — the separation, the state machine, the loop guard,
-the fallbacks — is production-shaped as-is.
+**🧱 Boring where it counts.**
+No framework. No ORM. No async. No orchestration library. SQLite and stdlib. The parts that matter —
+rules, state machine, single writer — are **short enough to read aloud on stage**, which is the point.
 
 ---
 
-## Repository layout
+## ⚠️ Known limits, stated honestly
+
+| Limit | Detail |
+|---|---|
+| 🎭 **Synthetic directory** | the recipient tiers and report counts are local mocks |
+| 🔤 **Exact-string link matching** | a typosquat evades it until it's been seen once |
+| 📏 **Untuned thresholds** | `300 / 150 / 70 / 0.5` are defensible, not tuned on real fraud data |
+| 🧪 **Local model** | the LLM is a local mock endpoint, not a production inference service |
+
+> ✅ Everything else — the separation, the state machine, the loop guard, the fallbacks — is
+> **production-shaped as-is.**
+
+---
+
+## 🗂️ Repository layout
 
 ```
-main.py                 launcher: build | web | tests | demo | ui
-pocketpay/
-  db.py                 schema + 21 scenarios + recipient directory (the dataset brain)
-  miner.py              mines 7 real messages from the UCI SMS Spam Collection
-  tools.py              the 3 mock services + scam-link feed; the state machine lives here
-  agent.py              the triage loop, the defensive JSON parser, the loop guard
-  guard.py              R1–R7, pure function, the only decider
-  web.py                stage dashboard (stdlib http.server + one HTML page)
-  ui.py                 terminal fallback interface
-  demo.py               scripted 21-scenario presentation run
-  tests.py              12 unit tests: guard rules + parser repair
-capri/
-  openai_lib.py         ModelHouse — thin streaming client for the local model
-  session.py            session id handling
-data/
-  SMSSpamCollection     the UCI SMS Spam Collection (public research dataset)
-CODE_GUIDE.md           the defence cheat-sheet: rules, state machine, trick questions
+📦 pocketpay
+├─ 🚀 main.py                 launcher: build | web | tests | demo | ui
+├─ 📁 pocketpay/
+│  ├─ 🧠 db.py                schema + 21 scenarios + recipient directory (the dataset brain)
+│  ├─ ⛏️ miner.py             mines 7 real messages from the UCI SMS Spam Collection
+│  ├─ 🔧 tools.py             the 3 mock services + scam-link feed; the state machine lives here
+│  ├─ 🤖 agent.py             the triage loop, the defensive JSON parser, the loop guard
+│  ├─ ⚖️ guard.py             R1–R7, pure function, the ONLY decider
+│  ├─ 🖥️ web.py               stage dashboard (stdlib http.server + one HTML page)
+│  ├─ ⌨️ ui.py                terminal fallback interface
+│  ├─ 🎬 demo.py              scripted 21-scenario presentation run
+│  └─ 🧪 tests.py             12 unit tests: guard rules + parser repair
+├─ 📁 capri/
+│  ├─ 🔌 openai_lib.py        ModelHouse — thin streaming client for the local model
+│  └─ 🗝️ session.py           session id handling
+├─ 📁 data/
+│  └─ 📊 SMSSpamCollection    the UCI SMS Spam Collection (public research dataset)
+└─ 📘 CODE_GUIDE.md           the defence cheat-sheet: rules, state machine, trick questions
 ```
 
 ---
 
-*Built for TechX Dubai '26. Every number on screen during the demo comes from a live run of this
-code against the local model — nothing is a mock-up, and nothing is hard-coded for the pitch.*
+<div align="center">
+
+### 🛡️ Built for **TechX Dubai '26**
+
+*Every number on screen during the demo comes from a live run of this code against the local model.*
+
+**Nothing is a mock-up. Nothing is hard-coded for the pitch.**
+
+<br>
+
+[![Made with](https://img.shields.io/badge/made%20with-SQLite%20%2B%20stdlib%20%2B%20stubbornness-2F3A45?style=for-the-badge)](#)
+
+<sub>⭐ If you're a judge reading this and you want the three-minute version — jump to <a href="#-demo-script-for-judges-4-min">the demo script</a>.</sub>
+
+</div>
