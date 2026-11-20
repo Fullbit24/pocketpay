@@ -19,10 +19,35 @@ Implementation: `venator/api.py` (`dispatch()`), served by `venator/web.py`.
 - Request bodies, where required, are JSON objects (`Content-Type:
   application/json`). Query parameters are read from the URL query string.
 - Error responses use the shape `{"error": "<message>"}`.
-- Status codes in use: `200` success, `400` bad input, `404` unknown route or
-  unknown transaction, `405` method not allowed on an otherwise valid path,
-  `500` unexpected server error (the message is the exception type and text; no
-  traceback is ever returned).
+- Status codes in use: `200` success, `400` bad input, `401` an identity was
+  presented but is invalid, `403` the caller's role may not perform the
+  operation, `404` unknown route or unknown transaction, `405` method not
+  allowed on an otherwise valid path, `500` unexpected server error (the message
+  is the exception type and text; no traceback is ever returned).
+
+## Identity
+
+A request may present an identity, which selects a role and its permissions
+(defined in `config/policy.yaml`). Two carriers are accepted:
+
+- `X-Venator-User: <user_id>:<token>` (HTTP header)
+- `?user=<user_id>:<token>` (query parameter, for plain `curl`)
+
+When an identity is present it is resolved to a live user and each route checks
+the permission it needs against the user's role. Reads are scoped: a student
+sees only their own transactions and a guardian only their linked student's;
+staff and admin see all.
+
+When no identity is present, the request is the anonymous operator and keeps
+full rights, identical to the behaviour before identity existed. This is what
+allows the unauthenticated dashboard and the QA scripts to run unchanged. An
+identity that is present but invalid (unknown user, wrong token, inactive
+account) is refused with `401`, never silently downgraded to the anonymous
+operator.
+
+See `USERS.md` for the roles, the permission matrix, and the demonstration-grade
+caveat on the token scheme.
+
 
 ## Route index
 
@@ -42,6 +67,9 @@ Implementation: `venator/api.py` (`dispatch()`), served by `venator/web.py`.
 | GET | `/api/v1/audit` | The audit log, newest first |
 | GET | `/api/v1/admin/agent` | The admin agent's current briefing |
 | POST | `/api/v1/admin/agent` | Ask the admin agent a question |
+| GET | `/api/v1/me` | The identity behind the request (any caller) |
+| GET | `/api/v1/users` | The user directory (`view_users`) |
+| GET | `/api/v1/users/{id}` | One user (`view_users`, or self) |
 
 ---
 
@@ -508,6 +536,85 @@ Status codes: `200`.
 curl -s -X POST http://127.0.0.1:8401/api/v1/admin/agent \
   -H 'Content-Type: application/json' \
   -d '{"question": "what are the current thresholds?"}'
+```
+
+---
+
+## GET /api/v1/me
+
+Purpose: report the identity behind the request and the permissions its role
+holds. Useful to confirm which role a credential resolves to.
+
+Request: an identity via header or query parameter, or none.
+
+Response `200` (identity present):
+
+```json
+{
+  "anonymous": false,
+  "user": {
+    "user_id": "U-STAFIA",
+    "display_name": "Stafia Mensah",
+    "role": "staff",
+    "student_name": null,
+    "email": "stafia@staff.example",
+    "created_at": "2026-11-20 10:00:00",
+    "active": true
+  },
+  "role": "staff",
+  "permissions": ["view_queue", "triage", "resolve_any", "view_audit"],
+  "scope": "all"
+}
+```
+
+Response `200` (no identity): `anonymous` is `true`, `user` is `null`, and the
+permissions list is the full set, reflecting the anonymous operator.
+
+Status codes: `200`.
+
+```bash
+curl -s http://127.0.0.1:8401/api/v1/me -H 'X-Venator-User: U-STAFIA:<token>'
+```
+
+---
+
+## GET /api/v1/users
+
+Purpose: the user directory. Tokens are never included in the response.
+
+Permission: `view_users`. Any other role receives `403` with
+`{"error": "permission denied: this role does not hold 'view_users'"}`.
+
+Response `200`:
+
+```json
+{"users": [{"user_id": "U-ADMIN", "display_name": "System Administrator", "role": "admin", "student_name": null, "email": "admin@campus.example", "created_at": "...", "active": true}]}
+```
+
+Status codes: `200`; `403` without the permission; `401` for an invalid identity.
+
+```bash
+curl -s http://127.0.0.1:8401/api/v1/users -H 'X-Venator-User: U-ADMIN:<token>'
+```
+
+---
+
+## GET /api/v1/users/{id}
+
+Purpose: one user record.
+
+Permission: `view_users` (any record), or the user reading its own record. Any
+other caller receives `403`.
+
+Path parameter: `id` — the user id.
+
+Response `200`: the same user object shape as one entry of `/users`.
+
+Status codes: `200`; `403` without the permission (and not the user's own
+record); `404` with `{"error": "no such user"}` if the id is unknown.
+
+```bash
+curl -s http://127.0.0.1:8401/api/v1/users/U-RAYAN -H 'X-Venator-User: U-ADMIN:<token>'
 ```
 
 ---

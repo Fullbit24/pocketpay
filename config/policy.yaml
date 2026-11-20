@@ -11,6 +11,48 @@ version: 3
 currency: AED
 
 # ---------------------------------------------------------------------------
+# Roles and permissions
+# ---------------------------------------------------------------------------
+# WHO may do WHAT is declared here, not in Python. Code knows how to check a
+# permission name; which role holds which permission comes from this section and
+# is read at request time. Adding a role, or moving a permission between roles,
+# is an edit to this file - no code change.
+#
+# The permission names below are the full set the API understands. A role with
+# an empty list may authenticate and see itself, but can change nothing.
+#
+#   view_queue       read the transaction queue and individual transactions
+#   triage           run the agent chain on a transaction
+#   resolve_own      resolve a transaction that belongs to this user
+#   resolve_any      resolve any transaction (staff review)
+#   guardian_approve approve or decline a minor's guardian-gated transfer
+#   change_policy    change a policy value through PATCH /api/v1/policy
+#   view_audit       read the audit log
+#   view_users       list and read user records
+roles:
+  student:
+    - view_queue
+    - triage
+    - resolve_own
+  guardian:
+    - view_queue
+    - guardian_approve
+    - resolve_own
+  staff:
+    - view_queue
+    - triage
+    - resolve_any
+    - view_audit
+  admin:
+    - view_queue
+    - triage
+    - resolve_any
+    - guardian_approve
+    - change_policy
+    - view_audit
+    - view_users
+
+# ---------------------------------------------------------------------------
 # Amounts
 # ---------------------------------------------------------------------------
 amounts:
@@ -118,11 +160,138 @@ recipients:
   scam_reports_escalate_at: 2
 
 # ---------------------------------------------------------------------------
+# User interface defaults
+# ---------------------------------------------------------------------------
+# The defaults a person's account starts from, and the ONLY declaration of which
+# preferences exist and what each may be set to. venator/prefs.py reads this
+# section at call time: a key that is not named here cannot be stored, and a
+# value outside the allowed set is rejected with a message. Add a key here to
+# make it settable; there is no hard-coded key list in Python.
+#
+# Each entry:
+#   default    the value a new account starts with
+#   options    the closed set of allowed values (a select / radio group)
+#   type       "enum" (options), "bool" (default true/false), or "text"
+#   label      the human label the settings surface renders
+#   group      the grouped section the surface files it under
+#   applies    "behaviour" when the value changes what the app does, or
+#              "display" when it is stored but not yet wired to an effect.
+ui:
+  # --- Appearance ---------------------------------------------------------
+  theme:
+    type: enum
+    default: system
+    options: [light, dark, system]
+    label: "Theme"
+    group: "Appearance"
+    applies: behaviour
+  density:
+    type: enum
+    default: comfortable
+    options: [comfortable, compact]
+    label: "Density"
+    group: "Appearance"
+    applies: behaviour
+  reduced_motion:
+    type: enum
+    # "system" follows the operating system; "on"/"off" are an explicit override
+    # that wins over the OS setting.
+    default: system
+    options: [system, on, off]
+    label: "Motion"
+    group: "Appearance"
+    applies: behaviour
+  larger_text:
+    type: bool
+    default: false
+    label: "Larger text"
+    group: "Accessibility"
+    applies: behaviour
+
+  # --- Notifications ------------------------------------------------------
+  alert_sound:
+    type: bool
+    default: true
+    label: "Alert sound on escalation"
+    group: "Notifications"
+    applies: behaviour
+  escalation_banner:
+    type: bool
+    default: true
+    label: "Show escalation banner"
+    group: "Notifications"
+    applies: behaviour
+
+  # --- Operations (queue behaviour) --------------------------------------
+  default_queue_filter:
+    type: enum
+    default: needs_review
+    options: [all, needs_review, escalated, cleared]
+    label: "Default queue filter"
+    group: "Payments"
+    applies: behaviour
+  show_resolved:
+    type: bool
+    default: true
+    label: "Show resolved items"
+    group: "Payments"
+    applies: behaviour
+  confirm_verbosity:
+    type: enum
+    default: standard
+    options: [brief, standard, detailed]
+    label: "Confirmation dialogs"
+    group: "Payments"
+    applies: behaviour
+
+  # --- Privacy ------------------------------------------------------------
+  analytics_opt_out:
+    type: bool
+    default: false
+    label: "Usage analytics"
+    group: "Privacy"
+    applies: display
+  retain_history_days:
+    type: enum
+    default: "90"
+    options: ["30", "90", "365"]
+    label: "Keep activity history"
+    group: "Privacy"
+    applies: display
+
+# ---------------------------------------------------------------------------
 # Services
 # ---------------------------------------------------------------------------
 services:
   # Directory lookup timeout, seconds. On timeout the transfer HOLDS, never blocks.
   directory_timeout_seconds: 4.0
+
+# ---------------------------------------------------------------------------
+# Intel — the campus intelligence layer (venator/intel.py).
+# ---------------------------------------------------------------------------
+# These thresholds drive the HISTORY analyses, not the per-payment guard. They
+# are read at call time by venator/intel.py; nothing here decides a single
+# payment, and nothing here moves money. See CAMPUS_INTEL.md.
+intel:
+  # Width, in minutes, of the rolling window a history analysis looks back over
+  # when its caller does not pass an explicit window. 1440 = 24 hours.
+  default_window_minutes: 1440
+  # Velocity: only transfers of at least this many AED count toward a pair's
+  # ranking, so canteen-size spending does not dominate the list.
+  velocity_min_amount: 24
+  # A recipient paid by at least this many DISTINCT senders inside a window is
+  # treated as a coordination candidate.
+  recipient_min_distinct_senders: 2
+  # A recipient account at or below this age (days) is treated as "new".
+  recipient_new_days: 30
+  # Report a campaign only when it links at least this many escalations.
+  campaign_min_size: 2
+  # Anomaly: a transfer at least this multiple of the student's own average
+  # transfer is reported as diverging from their baseline.
+  anomaly_multiplier: 3.0
+  # Anomaly: score weight given to a payment to a recipient the student has
+  # never paid before, on the same scale as the amount ratio.
+  anomaly_new_recipient_weight: 3.0
 
 # ---------------------------------------------------------------------------
 # Rule order - first match wins. Names map to venator/rules/*.py

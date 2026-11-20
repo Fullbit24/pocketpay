@@ -64,6 +64,33 @@ CREATE TABLE IF NOT EXISTS decision_log (
     detail      TEXT NOT NULL,
     created_at  TEXT DEFAULT (datetime('now'))
 );
+CREATE TABLE IF NOT EXISTS users (
+    user_id       TEXT PRIMARY KEY,
+    display_name  TEXT NOT NULL,
+    role          TEXT NOT NULL,      -- must name a role in policy.yaml's `roles:`
+    student_name  TEXT,               -- links a student/guardian user to transactions.student
+    email         TEXT,
+    api_token     TEXT,               -- demonstration-grade shared secret; see USERS.md
+    created_at    TEXT DEFAULT (datetime('now')),
+    active        INTEGER NOT NULL DEFAULT 1
+);
+-- A class is a real teaching cohort a teacher surface can show. The teacher is
+-- named (not a foreign key to users) so a cohort survives even before that
+-- teacher has a login, and so a class never depends on the identity layer.
+CREATE TABLE IF NOT EXISTS classes (
+    class_id      TEXT PRIMARY KEY,
+    name          TEXT NOT NULL,      -- e.g. 'Grade 11-A'
+    teacher_name  TEXT NOT NULL,      -- e.g. 'Ms. Layla Hassan'
+    room          TEXT                -- e.g. 'B-204'
+);
+-- Enrolment is the many-to-many link between a class and a student. student_name
+-- matches transactions.student and users.student_name, so a teacher cohort and a
+-- student's payment history resolve to the same person.
+CREATE TABLE IF NOT EXISTS enrolments (
+    class_id      TEXT NOT NULL,
+    student_name  TEXT NOT NULL,
+    PRIMARY KEY (class_id, student_name)
+);
 """
 
 # (txn_id, student, recipient_id, amount, purpose, message, student_age)
@@ -110,7 +137,62 @@ GUARDIANS = [
     ("G-BILAL",  "Bilal",  "Fatima Al-Sayed (mother)",  "mother",         "+971-50-000-0001"),
     ("G-KAREEM", "Kareem", "Yousef Al-Najjar (father)", "father",         "+971-50-000-0002"),
     ("G-NOOR",   "Noor",   "Hessa Al-Marzouqi (aunt)",  "legal_guardian", "+971-50-000-0003"),
+    # Every minor in the seed has a guardian, so a guardian surface is never
+    # empty for a student the age gate can hold.
+    ("G-LAYTH",  "Layth",  "Amal Al-Hosani (mother)",   "mother",         "+971-50-000-0004"),
+    ("G-REEM",   "Reem",   "Nasser Al-Zaabi (father)",  "father",         "+971-50-000-0005"),
+    ("G-SAEED",  "Saeed",  "Mariam Al-Rumaithi (mother)", "mother",       "+971-50-000-0006"),
+    ("G-TALA",   "Tala",   "Rania Khoury (legal guardian)", "legal_guardian", "+971-50-000-0007"),
+    ("G-NADIA",  "Nadia",  "Sultan Al-Mehairi (father)", "father",         "+971-50-000-0008"),
+    # Two students OVER sixteen also have a guardian on file (a family that
+    # keeps one linked); not every older student has one, which is the point.
+    ("G-SAMI",   "Sami",   "Huda Al-Suwaidi (mother)",  "mother",         "+971-50-000-0009"),
+    ("G-HANA",   "Hana",   "Jamilah Farouk (aunt)",     "legal_guardian", "+971-50-000-0010"),
 ]
+
+# Users. Every role named in config/policy.yaml's `roles:` section is covered.
+# Consistency rules the seed satisfies:
+#   - a student user's student_name matches a real student name in transactions
+#   - a guardian's student_name matches both guardians.student_name and the same
+#     student's transactions, so scoping() links guardian -> student correctly.
+# The api_token is a demonstration-grade shared secret (see USERS.md); it is
+# generated per build, never printed by the application, and only ever compared
+# with hmac.compare_digest. user_id, display_name, role, student_name, email.
+USERS = [
+    ("U-RAYAN",   "Rayan Haddad",         "student",  "Rayan",  "rayan@campus.example"),
+    ("U-MAYA",    "Maya Al-Farsi",        "student",  "Maya",   "maya@campus.example"),
+    ("U-BILAL",   "Bilal Othman",         "student",  "Bilal",  "bilal@campus.example"),
+    ("U-KAREEM",  "Kareem Idris",         "student",  "Kareem", "kareem@campus.example"),
+    ("U-NOOR",    "Noor Al-Marzouqi",     "student",  "Noor",   "noor@campus.example"),
+    ("U-FATIMA",  "Fatima Al-Sayed",      "guardian", "Bilal",  "fatima@guardian.example"),
+    ("U-HESSA",   "Hessa Al-Marzouqi",    "guardian", "Noor",   "hessa@guardian.example"),
+    ("U-STAFIA",  "Stafia Mensah",        "staff",    None,     "stafia@staff.example"),
+    ("U-ADMIN",   "System Administrator", "admin",    None,     "admin@campus.example"),
+    # Students from the wider campus cohort, so a student surface has more than
+    # one identity to log in as.
+    ("U-LAYTH",   "Layth Al-Hosani",      "student",  "Layth",  "layth@campus.example"),
+    ("U-REEM",    "Reem Al-Zaabi",        "student",  "Reem",   "reem@campus.example"),
+    ("U-SAEED",   "Saeed Al-Rumaithi",    "student",  "Saeed",  "saeed@campus.example"),
+    ("U-TALA",    "Tala Khoury",          "student",  "Tala",   "tala@campus.example"),
+    ("U-NADIA",   "Nadia Al-Mehairi",     "student",  "Nadia",  "nadia@campus.example"),
+    ("U-HANA",    "Hana Kanaan",          "student",  "Hana",   "hana@campus.example"),
+    ("U-SAMI",    "Sami Al-Suwaidi",      "student",  "Sami",   "sami@campus.example"),
+    # Guardians linked to the new minors and the two linked older students.
+    ("U-AMAL",    "Amal Al-Hosani",       "guardian", "Layth",  "amal@guardian.example"),
+    ("U-NASSER",  "Nasser Al-Zaabi",      "guardian", "Reem",   "nasser@guardian.example"),
+    ("U-MARIAM",  "Mariam Al-Rumaithi",   "guardian", "Saeed",  "mariam.g@guardian.example"),
+    ("U-RANIA",   "Rania Khoury",         "guardian", "Tala",   "rania@guardian.example"),
+    ("U-SULTAN",  "Sultan Al-Mehairi",    "guardian", "Nadia",  "sultan@guardian.example"),
+    ("U-HUDA",    "Huda Al-Suwaidi",      "guardian", "Sami",   "huda@guardian.example"),
+    ("U-JAMILAH", "Jamilah Farouk",       "guardian", "Hana",   "jamilah@guardian.example"),
+    # Teachers. The policy defines no `teacher` role, and policy.yaml is not ours
+    # to edit, so each teacher logs in under the existing `staff` role; their
+    # classes are owned via classes.teacher_name, which is what a cohort reads.
+    ("U-HASSAN",  "Ms. Layla Hassan",     "staff",    None,     "layla.hassan@staff.example"),
+    ("U-KAMAL",   "Mr. Idris Kamal",      "staff",    None,     "idris.kamal@staff.example"),
+    ("U-NASSER_T", "Ms. Salwa Nasser",    "staff",    None,     "salwa.nasser@staff.example"),
+]
+
 
 RECIPIENTS = [
     # id, name, tier, days_ago, scam_reports, txns_90d, outage
@@ -131,6 +213,49 @@ RECIPIENTS = [
     ("R-DESK",     "Campus Print Desk",     "verified_vendor", 500, 0, 940,  0),
     ("R-CYBER",    "CyberLab Supplies",     "verified_vendor", 220, 0, 88,   0),
     ("R-UNSTABLE", "Karim (rover)",         "trusted_peer",    200, 0, 31,   1),  # outage sim!
+    # --- Campus cohort recipients (added for the multi-surface demo) ---------
+    # Two busy peer accounts that many students pay a little each (coordinated
+    # -recipient pattern), a mini-mart vendor, and a fund-raiser peer who takes a
+    # long run of small transfers (velocity pattern).
+    ("R-CLASSFUND", "Grade 11-A Class Fund", "trusted_peer",    150, 0, 260,  0),
+    ("R-SCHOOLSHOP", "School Shop (stationery)", "verified_vendor", 300, 0, 540, 0),
+    ("R-MAYSHA",   "Maysha (classmate)",    "trusted_peer",    210, 0, 64,   0),
+    ("R-HAMAD",    "Hamad (classmate)",     "trusted_peer",    190, 0, 58,   0),
+    # A fresh unverified handle reused by a whole phishing campaign: several
+    # students forward the same wallet to it with the same link, so R1 knows the
+    # link and the coordinated-recipient view shows a spike.
+    ("R-PROMO88",  "@promo_bonus_88",       "unverified",      1,   2, 0,    0),
+]
+
+# ---------------------------------------------------------------------------
+# Classes and enrolments — the teacher surface's real cohorts.
+# ---------------------------------------------------------------------------
+# class_id, name, teacher_name, room
+CLASSES = [
+    ("C-11A", "Grade 11-A", "Ms. Layla Hassan",  "B-204"),
+    ("C-10B", "Grade 10-B", "Mr. Idris Kamal",   "B-112"),
+    ("C-12C", "Grade 12-C", "Ms. Salwa Nasser",  "A-301"),
+    ("C-09D", "Grade 9-D",  "Ms. Layla Hassan",  "B-206"),  # same teacher, second class
+    ("C-12A", "Grade 12-A", "Mr. Idris Kamal",   "A-210"),  # second class for Mr. Kamal
+]
+
+# class_id, student_name — everyone in CLASSES' rosters appears here.
+ENROLMENTS = [
+    # Grade 11-A (Ms. Hassan)
+    ("C-11A", "Rayan"), ("C-11A", "Maya"), ("C-11A", "Zayd"), ("C-11A", "Lina"),
+    ("C-11A", "Tariq"), ("C-11A", "Noor"),
+    # Grade 10-B (Mr. Kamal)
+    ("C-10B", "Yusuf"), ("C-10B", "Dina"), ("C-10B", "Omar"), ("C-10B", "Hana"),
+    ("C-10B", "Bilal"), ("C-10B", "Nadia"),
+    # Grade 12-C (Ms. Nasser)
+    ("C-12C", "Rami"), ("C-12C", "Sara"), ("C-12C", "Kareem"), ("C-12C", "Sami"),
+    ("C-12C", "Farah"), ("C-12C", "Jiad"), ("C-12C", "Mona"),
+    # Grade 9-D (Ms. Hassan) — the youngest cohort, several minors
+    ("C-09D", "Layth"), ("C-09D", "Reem"), ("C-09D", "Saeed"), ("C-09D", "Tala"),
+    ("C-09D", "Bilal"),
+    # Grade 12-A (Mr. Kamal)
+    ("C-12A", "Ali"), ("C-12A", "Aisha"), ("C-12A", "Hassan"), ("C-12A", "Belal"),
+    ("C-12A", "Mariam"),
 ]
 
 
@@ -157,6 +282,7 @@ def get_log(con, txn_id):
 def build():
     """Wipe and rebuild the synthetic campus dataset, augmented with REAL
     open-source scam/ham text (UCI SMS Spam Collection via miner.py). Idempotent."""
+    import secrets
     from . import miner
     if os.path.exists(DB_PATH):
         os.remove(DB_PATH)
@@ -164,6 +290,13 @@ def build():
     con.executemany("INSERT INTO recipients VALUES (?,?,?,?,?,?,?)",
                     RECIPIENTS + miner.mined_recipients())
     con.executemany("INSERT INTO guardians VALUES (?,?,?,?,?)", GUARDIANS)
+    # Users get a fresh per-build token. secrets.token_hex is the only source of
+    # randomness; the token is written to the row and never logged.
+    con.executemany(
+        "INSERT INTO users (user_id, display_name, role, student_name, email, api_token) "
+        "VALUES (?,?,?,?,?,?)",
+        [(uid, name, role, student, email, secrets.token_hex(24))
+         for uid, name, role, student, email in USERS])
     scenarios = SCENARIOS + miner.mined_scenarios(start_n=len(SCENARIOS) + 1)
     for row in scenarios:
         txn_id, student, rid, amount, purpose, msg = row[:6]
@@ -178,7 +311,7 @@ def build():
     n = con.execute("SELECT COUNT(*) c FROM transactions").fetchone()["c"]
     print(f"dataset built: {n} transactions ({len(SCENARIOS)} authored + "
           f"{n - len(SCENARIOS)} mined from UCI SMS Spam Collection), "
-          f"{len(GUARDIANS)} guardians -> {DB_PATH}")
+          f"{len(GUARDIANS)} guardians, {len(USERS)} users -> {DB_PATH}")
 
 
 if __name__ == "__main__":

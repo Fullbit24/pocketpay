@@ -64,6 +64,7 @@ hard-coded in Python. Key sections:
 | `recipients` | Trusted tiers and the confirmed-report count that escalates a recipient. |
 | `services` | Directory lookup timeout. On timeout the transfer holds, never blocks. |
 | `rules` | The guard rule order, first match wins. Removing an entry switches that rule off; the system still runs. |
+| `roles` | Roles and the permissions each holds. Which role may do what is declared here, not in code. See `USERS.md`. |
 
 Change a value here and restart the process for it to apply everywhere.
 
